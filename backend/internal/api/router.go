@@ -29,9 +29,15 @@ func NewRouter(h *APIHandler, allowedOrigin string) http.Handler {
 		MaxAge:           300,  // Maximum value not ignored by any of major browsers
 	}))
 
-	// --- Routes ---
-	r.Get("/api/verse/today", h.HandleGetVerseToday)
+	r.Get("/api/plans/today", h.HandleGetPlanVerseToday) // Renamed endpoint
 	r.Post("/api/chat", h.HandleChat)
+
+	// --- Admin Routes (Could be grouped under /api/admin) ---
+	r.Route("/api/admin", func(r chi.Router) {
+		// Add admin-specific middleware here later (e.g., authentication)
+		r.Post("/plans", h.HandleCreatePlan)
+		r.Get("/plans", h.HandleListPlans)
+	})
 
 	// Optional: Health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
