@@ -105,8 +105,25 @@ type ChatRequest struct {
 	Question string            `json:"question"`
 }
 
+func (h *APIHandler) HandleResetChat(w http.ResponseWriter, r *http.Request) {
+	err := h.chatService.ResetChatHistory(r.Context())
+	if err != nil {
+		// This is unlikely with the current implementation, but handle defensively
+		log.Printf("ERROR: Failed to reset chat history: %v", err)
+		writeError(w, "Failed to reset chat history", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Chat history reset successfully"})
+}
+
+// HandleChat needs a slight modification:
+// It no longer needs the full verse details IF a conversation is ongoing.
+// However, the *first* message might need it.
+// The service now handles adding verse context on the first turn.
+// We can keep sending the current verse details from the frontend,
+// and the service decides if/how to use it for a *new* conversation.
 func (h *APIHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
-	var req ChatRequest
+	var req ChatRequest // Assumes ChatRequest still contains Verse (DailyVerse) and Question
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -116,25 +133,14 @@ func (h *APIHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Question cannot be empty", http.StatusBadRequest)
 		return
 	}
-	// Basic validation for verse data from DailyVerse
-	if req.Verse.Text == "" || req.Verse.Reference == "" {
-		writeError(w, "Verse text and reference are required", http.StatusBadRequest)
-		return
-	}
 
-	// Create a temporary BibleVerse struct from DailyVerse for the existing chat service
-	// OR modify the chat service to accept DailyVerse / Reference+Text directly.
-	// Let's adapt here for simplicity:
-	tempBibleVerse := domain.BibleVerse{
-		Reference: req.Verse.Reference,
-		Text:      req.Verse.Text,
-		// Book, Chapter, VerseNumber aren't strictly needed by the current chat prompt
-	}
-
-	answer, err := h.chatService.GetResponse(r.Context(), tempBibleVerse, req.Question) // Pass the adapted verse
+	// The verse details (req.Verse) are passed to the service.
+	// The service determines if it's the start of a new conversation
+	// and adds context if needed.
+	answer, err := h.chatService.GetResponse(r.Context(), req.Verse, req.Question)
 	if err != nil {
 		log.Printf("ERROR: Failed to get chat response: %v", err)
-		if errors.Is(err, context.DeadlineExceeded) {
+		if errors.Is(err, context.DeadlineExceeded) { // Use context.DeadlineExceeded
 			writeError(w, "Chatbot request timed out, please try again.", http.StatusGatewayTimeout)
 		} else {
 			writeError(w, "Chatbot couldn't answer right now.", http.StatusInternalServerError)
