@@ -1,18 +1,12 @@
-
-# fly.toml app configuration file generated for deb--87fkg on 2025-04-11T02:36:10Z
+# fly.toml app configuration file generated for deb on 2025-04-11T10:24:46Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'deb--87fkg'
-primary_region = 'lhr'
+app = 'deb'
+primary_region = 'ams'
 
 [build]
-  [build.args]
-    GO_VERSION = '1.21.0'
-
-[env]
-  PORT = '8080'
 
 [http_service]
   internal_port = 8080
