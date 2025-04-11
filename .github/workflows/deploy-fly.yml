@@ -29,9 +29,8 @@ jobs:
 
       # --- Setup Flyctl ---
       # Use a specific version tag instead of master for stability
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-        with:
-          version: 0.0.462
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
 
       # --- Verify Flyctl Installation (Optional but helpful for debugging) ---
       - name: Verify flyctl installation
