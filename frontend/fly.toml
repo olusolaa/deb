@@ -1,6 +1,6 @@
 # frontend/fly.toml
 
-app = "your-frontend-app-name" # Your actual frontend app name
+app = "deb-qcd4za" # Your actual frontend app name
 primary_region = "iad" # Or your chosen region
 
 [build]
