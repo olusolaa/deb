@@ -1,0 +1,74 @@
+name: Deploy Bible App to Fly.io
+
+on:
+  push:
+    branches:
+      - main # Trigger deployment only on pushes to the main branch
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  # Define your Fly app names here for clarity
+  BACKEND_APP_NAME: "your-bible-backend-app-name" # Replace with your actual backend app name
+  FRONTEND_APP_NAME: "your-bible-frontend-app-name" # Replace with your actual frontend app name
+
+  # Environment variables / Secrets for the backend (will be set via fly secrets)
+  LLM_MODEL_NAME: "deepseek/deepseek-chat:free" # Or configure as needed
+  OPENROUTER_BASE_URL: "https://openrouter.ai"
+  # OPENROUTER_API_KEY is handled as a secret below
+  # CORS_ALLOWED_ORIGIN is derived from frontend app name below
+
+jobs:
+  deploy:
+    name: Deploy Backend and Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # -------------------------------------
+      # Deploy Backend
+      # -------------------------------------
+      - name: Deploy Backend to Fly.io
+        run: |
+          # Calculate expected Frontend URL for CORS
+          FRONTEND_URL="https://${{ env.FRONTEND_APP_NAME }}.fly.dev"
+          echo "Setting CORS for $FRONTEND_URL"
+
+          # Set secrets (idempotent - safe to run every time)
+          # Note: Secrets are not available as build args. Use environment variables.
+          # OPENROUTER_API_KEY needs to be set manually once via `fly secrets set` or UI if sensitive
+          # Or, if less sensitive / using a dedicated CI key:
+          # fly secrets set OPENROUTER_API_KEY='your-key-if-ok-in-logs' -a ${{ env.BACKEND_APP_NAME }}
+
+          # Set non-sensitive env vars / secrets via flyctl
+          fly secrets set LLM_MODEL_NAME="${{ env.LLM_MODEL_NAME }}" CORS_ALLOWED_ORIGIN="$FRONTEND_URL" OPENROUTER_BASE_URL="${{ env.OPENROUTER_BASE_URL }}" -a ${{ env.BACKEND_APP_NAME }}
+
+          # Trigger the deployment using the Dockerfile in the backend directory
+          fly deploy --remote-only --app ${{ env.BACKEND_APP_NAME }} --dockerfile Dockerfile
+        working-directory: ./backend # Run fly deploy from the backend directory
+
+      # -------------------------------------
+      # Deploy Frontend
+      # -------------------------------------
+      - name: Deploy Frontend to Fly.io
+        run: |
+          # Calculate Backend URL
+          BACKEND_URL="https://${{ env.BACKEND_APP_NAME }}.fly.dev"
+          echo "Injecting Backend URL: $BACKEND_URL"
+
+          # Trigger the deployment using the Dockerfile in the frontend directory
+          # Pass the backend URL as a build argument
+          fly deploy --remote-only --app ${{ env.FRONTEND_APP_NAME }} --dockerfile Dockerfile --build-arg REACT_APP_API_URL="$BACKEND_URL"
+        working-directory: ./frontend # Run fly deploy from the frontend directory
+
+      - name: Deployment Summary
+        run: |
+          echo "Backend (${{ env.BACKEND_APP_NAME }}) deployed."
+          echo "Frontend (${{ env.FRONTEND_APP_NAME }}) deployed."
+          echo "Frontend URL: https://${{ env.FRONTEND_APP_NAME }}.fly.dev"
+          echo "Backend URL: https://${{ env.BACKEND_APP_NAME }}.fly.dev"

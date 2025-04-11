@@ -46,11 +46,16 @@ type Message struct {
 }
 
 type ChatCompletionRequest struct {
-	Model       string    `json:"model"` // e.g., "openai/gpt-3.5-turbo" or "google/gemini-pro" via OpenRouter
-	Messages    []Message `json:"messages"`
-	Temperature float64   `json:"temperature,omitempty"`
-	MaxTokens   int       `json:"max_tokens,omitempty"`
+	Model          string          `json:"model"` // e.g., "openai/gpt-3.5-turbo" or "google/gemini-pro" via OpenRouter
+	Messages       []Message       `json:"messages"`
+	Temperature    float64         `json:"temperature,omitempty"`
+	MaxTokens      int             `json:"max_tokens,omitempty"`
+	ResponseFormat *ResponseFormat `json:"response_format,omitempty"` // Add this field
 	// Add other OpenRouter specific fields if needed (e.g., transforms, route)
+}
+
+type ResponseFormat struct {
+	Type string `json:"type"` // e.g., "json_object"
 }
 
 type ChatCompletionResponse struct {
