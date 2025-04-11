@@ -3,7 +3,9 @@ import '../App.css'; // Use shared styles
 import './AdminPage.css'; // Add specific admin styles
 
 // Backend API URL
-const API_URL = 'http://localhost:8080/api/admin'; // Admin endpoints
+const API_URL = process.env.REACT_APP_API_URL || window.location.hostname === 'localhost' 
+  ? 'http://localhost:8080/api/admin' 
+  : `https://${window.location.hostname}/api/admin`; // Dynamically set API URL based on environment
 
 function AdminPage() {
     const [topic, setTopic] = useState('');

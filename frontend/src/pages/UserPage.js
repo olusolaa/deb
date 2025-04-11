@@ -3,7 +3,9 @@ import  '../App.css'; // Use shared styles
 import './UserPage.css';
 
 // Backend API URL
-const API_URL = 'http://localhost:8080/api'; // Adjust if needed
+const API_URL = process.env.REACT_APP_API_URL || window.location.hostname === 'localhost' 
+  ? 'http://localhost:8080/api' 
+  : `https://${window.location.hostname}/api`; // Dynamically set API URL based on environment
 
 function UserPage() {
     const [dailyVerse, setDailyVerse] = useState(null); // Now stores DailyVerse object
