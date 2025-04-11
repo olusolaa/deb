@@ -1,22 +1,29 @@
-# fly.toml file generated for your-bible-backend-app-name on 2023-10-27T10:00:00-07:00
 
-app = "your-bible-backend-app-name" # Replace with your actual backend app name
-primary_region = "iad" # Choose your preferred region (e.g., iad, ams, sin)
+# fly.toml app configuration file generated for deb--87fkg on 2025-04-11T02:36:10Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-# No [build] section needed if using a Dockerfile named Dockerfile
+app = 'deb--87fkg'
+primary_region = 'lhr'
+
+[build]
+  [build.args]
+    GO_VERSION = '1.21.0'
+
+[env]
+  PORT = '8080'
 
 [http_service]
-internal_port = 8080 # Port your Go app listens on (matches EXPOSE)
-force_https = true
-auto_stop_machines = true # Start/stop machines automatically based on traffic
-auto_start_machines = true
-min_machines_running = 0 # Scale to zero for cost savings
-processes = ["app"] # Matches the default process group
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
 
-# Optional: Add health checks
-# [[http_service.checks]]
-#   interval = "10s"
-#   timeout = "2s"
-#   grace_period = "5s"
-#   method = "GET"
-#   path = "/health" # Your health check endpoint
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024
