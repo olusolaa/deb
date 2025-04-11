@@ -30,7 +30,7 @@ jobs:
       # --- Setup Flyctl ---
       # Use a specific version tag instead of master for stability
       - name: Setup Flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@v1.8 # Or latest stable version
+        uses: superfly/flyctl-actions/setup-flyctl@v1.5 # Or latest stable version
 
       # --- Verify Flyctl Installation (Optional but helpful for debugging) ---
       - name: Verify flyctl installation
