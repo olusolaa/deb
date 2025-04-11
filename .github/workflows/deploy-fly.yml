@@ -7,9 +7,7 @@ on:
   workflow_dispatch: # Allows manual triggering from the Actions tab
 
 env:
-  # Remove FLY_API_TOKEN from top-level env block
-  # FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }} # <-- REMOVE THIS LINE
-
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
   # !!! REPLACE THESE WITH YOUR ACTUAL APP NAMES !!!
   BACKEND_APP_NAME: "your-bible-backend-app-name"
   FRONTEND_APP_NAME: "your-bible-frontend-app-name"
@@ -17,7 +15,7 @@ env:
   # Environment variables / Secrets for the backend (will be set via fly secrets)
   LLM_MODEL_NAME: "deepseek/deepseek-chat:free" # Or configure as needed
   OPENROUTER_BASE_URL: "https://openrouter.ai"
-  # OPENROUTER_API_KEY is handled as a secret set manually via flyctl or UI
+  # OPENROUTER_API_KEY is handled as a secret below
   # CORS_ALLOWED_ORIGIN is derived from frontend app name below
 
 jobs:
@@ -30,23 +28,18 @@ jobs:
         uses: actions/checkout@v4
 
       # --- Setup Flyctl ---
+      # Use a specific version tag instead of master for stability
       - name: Setup Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       # --- Verify Flyctl Installation (Optional but helpful for debugging) ---
       - name: Verify flyctl installation
         run: flyctl version
-        # Pass the token explicitly to this step's environment
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       # -------------------------------------
       # Deploy Backend
       # -------------------------------------
       - name: Deploy Backend to Fly.io
-        # Pass the token explicitly to this step's environment
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           # Calculate expected Frontend URL for CORS
           FRONTEND_URL="https://${{ env.FRONTEND_APP_NAME }}.fly.dev"
@@ -59,16 +52,13 @@ jobs:
 
           # Trigger the deployment using the Dockerfile in the backend directory
           echo "Deploying backend app..."
-          flyctl deploy --remote-only --app ${{ env.BACKEND_APP_NAME }} --dockerfile Dockerfile --strategy immediate --detach --stage
+          flyctl deploy --remote-only --app ${{ env.BACKEND_APP_NAME }} --dockerfile Dockerfile --strategy immediate --detach --stage # Added detach & stage
         working-directory: ./backend # Run fly commands from the backend directory
 
       # -------------------------------------
       # Deploy Frontend
       # -------------------------------------
       - name: Deploy Frontend to Fly.io
-        # Pass the token explicitly to this step's environment
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           # Calculate Backend URL
           BACKEND_URL="https://${{ env.BACKEND_APP_NAME }}.fly.dev"
@@ -77,21 +67,18 @@ jobs:
           # Trigger the deployment using the Dockerfile in the frontend directory
           # Pass the backend URL as a build argument
           echo "Deploying frontend app..."
-          flyctl deploy --remote-only --app ${{ env.FRONTEND_APP_NAME }} --dockerfile Dockerfile --build-arg REACT_APP_API_URL="$BACKEND_URL" --strategy immediate --detach --stage
+          flyctl deploy --remote-only --app ${{ env.FRONTEND_APP_NAME }} --dockerfile Dockerfile --build-arg REACT_APP_API_URL="$BACKEND_URL" --strategy immediate --detach --stage # Added detach & stage
         working-directory: ./frontend # Run fly commands from the frontend directory
 
       # --- Monitor Deployments (Optional but Recommended) ---
+      # Wait a bit for deployments to potentially start rolling out
       - name: Wait for deployments initiation
         run: sleep 15
 
       - name: Monitor Backend Deployment
-        env: # Pass token here too if needed for status check
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl status --app ${{ env.BACKEND_APP_NAME }} || echo "Backend status check failed or deployment ongoing"
 
       - name: Monitor Frontend Deployment
-        env: # Pass token here too if needed for status check
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl status --app ${{ env.FRONTEND_APP_NAME }} || echo "Frontend status check failed or deployment ongoing"
 
       # --- Deployment Summary ---
