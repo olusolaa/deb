@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import  '../App.css'; // Use shared styles
 import './UserPage.css';
 
-// Backend API URL
-const API_URL = process.env.REACT_APP_API_URL || window.location.hostname === 'localhost' 
-  ? 'http://localhost:8080/api' 
-  : `https://${window.location.hostname}/api`; // Dynamically set API URL based on environment
+// Backend API URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_URL = `${API_BASE_URL}/api`;
 
 function UserPage() {
     const [dailyVerse, setDailyVerse] = useState(null); // Now stores DailyVerse object
