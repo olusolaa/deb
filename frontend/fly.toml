@@ -6,15 +6,20 @@ primary_region = "iad" # Or your chosen region
 [build]
 dockerfile = "Dockerfile"
 [build.args]
-# !!! SET THIS TO YOUR ACTUAL BACKEND URL !!!
-REACT_APP_API_URL = "https://deb.fly.dev" # <---- Make sure this is correct
+# Correctly set for production build
+REACT_APP_API_URL = "https://deb.fly.dev"
 
 [http_service]
-internal_port = 8080 # Port Caddy listens on
+internal_port = 8080 # Port Caddy listens on inside container
 force_https = true
-auto_stop_machines = true
+auto_stop_machines = true # Or 'stop'
 auto_start_machines = true
 min_machines_running = 0
 processes = ["app"]
 
-# ... (Optional checks) ...
+# [[vm]] # Optional VM settings can go here if needed
+#   cpu_kind = "shared"
+#   cpus = 1
+#   memory_mb = 256 # Example for a small frontend
+
+# [[http_service.checks]] # Optional health checks can go here

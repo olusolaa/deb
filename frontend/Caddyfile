@@ -1,15 +1,7 @@
-# Listen on the port Fly expects for http_service.internal_port
 :8080 {
     root * /usr/share/caddy
-    encode gzip # Enable compression
+    encode gzip
 
-    # Handle API requests (optional proxy, generally frontend calls backend directly)
-    # reverse_proxy /api/* {env.REACT_APP_API_URL} # Not usually needed here
-
-    # Serve static files
     file_server
-
-    # Single Page App (SPA) rewrite rule
-    # If a requested file isn't found, serve index.html instead
     try_files {path} /index.html
 }
