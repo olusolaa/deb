@@ -1,0 +1,34 @@
+# Air configuration for Bible App backend
+# For more information: https://github.com/cosmtrek/air
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# Just plain old shell command. You could use `make` as well.
+cmd = "go build -o ./tmp/main ./cmd/server/main.go"
+# Binary file yields from `cmd`.
+bin = "tmp/main"
+# Customize binary.
+full_bin = "./tmp/main"
+# Watch these directories for changes.
+include_dir = ["cmd", "internal", "pkg"]
+# Exclude files/directories from being watched.
+exclude_dir = ["tmp", "vendor"]
+# Watch these file extensions.
+include_ext = ["go", "env"]
+
+[log]
+# Show log time
+time = true
+
+[color]
+# Customize each part's color.
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
+
+[misc]
+# Delete tmp directory on exit
+clean_on_exit = true

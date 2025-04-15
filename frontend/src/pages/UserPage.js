@@ -124,6 +124,9 @@ function UserPage() {
                 {dailyVerse && !isLoadingVerse && !verseError && (
                     <>
                         <h2 className="verse-reference">{dailyVerse.reference}</h2>
+                        {dailyVerse.title && (
+                            <h3 className="verse-title">{dailyVerse.title}</h3>
+                        )}
                         <p className="verse-text">"{dailyVerse.text}"</p>
                         {dailyVerse.explanation && (
                             <p className="verse-explanation">

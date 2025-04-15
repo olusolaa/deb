@@ -1,0 +1,57 @@
+services:
+  # Frontend React Application
+  frontend:
+    build:
+      context: ./frontend
+    container_name: deb-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:8084
+      - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Backend Go Application
+  backend:
+    build:
+      context: ./backend
+    container_name: deb-backend
+    ports:
+      - "8084:8084"
+    volumes:
+      - ./backend:/app
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-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}
+      - OPENROUTER_BASE_URL=https://openrouter.ai
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-google/gemini-2.0-flash-exp:free}
+      - PORT=8084
+      - CORS_ALLOWED_ORIGIN=http://localhost:3000
+      - MONGODB_URI=mongodb://mongodb:27017/bibleapp
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URL=http://localhost:8084/auth/google/callback
+      - JWT_SECRET=${JWT_SECRET:-temporary-dev-jwt-secret-change-in-production}
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: deb-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=bibleapp
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

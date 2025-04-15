@@ -23,28 +23,30 @@ const userContextKey contextKey = "user"
 
 // UserClaims holds the user information extracted from the JWT
 type UserClaims struct {
-	UserID    string
-	GoogleID  string
-	Email     string
-	Name      string
-	Picture   string
+	UserID   string
+	GoogleID string
+	Email    string
+	Name     string
+	Picture  string
 }
 
-// APIHandler now includes AuthService and JWT secret
+// APIHandler now includes AuthService, VerseService and JWT secret
 type APIHandler struct {
 	chatService  service.ChatService
 	planService  service.PlanService
+	verseService service.VerseService // Add VerseService for on-demand verse content
 	authService  *service.AuthService // Add AuthService
-	jwtSecret    []byte              // Store JWT secret for middleware
+	jwtSecret    []byte               // Store JWT secret for middleware
 }
 
 // Update NewAPIHandler
-func NewAPIHandler(cs service.ChatService, ps service.PlanService, as *service.AuthService, jwtSecret string) *APIHandler {
+func NewAPIHandler(cs service.ChatService, ps service.PlanService, vs service.VerseService, as *service.AuthService, jwtSecret string) *APIHandler {
 	return &APIHandler{
-		chatService: cs,
-		planService: ps,
-		authService: as, // Inject AuthService
-		jwtSecret:   []byte(jwtSecret),
+		chatService:  cs,
+		planService:  ps,
+		verseService: vs, // Inject VerseService
+		authService:  as, // Inject AuthService
+		jwtSecret:    []byte(jwtSecret),
 	}
 }
 
@@ -148,9 +150,9 @@ func (h *APIHandler) HandleGoogleCallback(w http.ResponseWriter, r *http.Request
 	http.SetCookie(w, &jwtCookie)
 
 	// Redirect the user to the frontend application homepage or dashboard
-	// TODO: Get frontend success redirect URL from config?
-	frontendSuccessURL := "/"
-	http.Redirect(w, r, frontendSuccessURL, http.StatusSeeOther)
+	// Extract the frontend URL from the CORS allowed origin
+	frontendURL := "http://localhost:3000"
+	http.Redirect(w, r, frontendURL, http.StatusSeeOther)
 }
 
 // HandleLogout clears the auth cookie
@@ -179,9 +181,9 @@ func (h *APIHandler) HandleGetCurrentUser(w http.ResponseWriter, r *http.Request
 
 	// Return relevant user info (don't expose everything from JWT if not needed)
 	userInfo := map[string]string{
-		"id":    userClaims.UserID,
-		"email": userClaims.Email,
-		"name":  userClaims.Name,
+		"id":      userClaims.UserID,
+		"email":   userClaims.Email,
+		"name":    userClaims.Name,
 		"picture": userClaims.Picture,
 		// Add other fields as needed by the frontend
 	}
@@ -243,11 +245,11 @@ func (h *APIHandler) AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		userClaims := UserClaims{
-			UserID:    userID,
-			GoogleID:  googleID,
-			Email:     email,
-			Name:      name,
-			Picture:   picture,
+			UserID:   userID,
+			GoogleID: googleID,
+			Email:    email,
+			Name:     name,
+			Picture:  picture,
 		}
 		ctx := context.WithValue(r.Context(), userContextKey, userClaims)
 
@@ -291,8 +293,8 @@ func (h *APIHandler) HandleCreatePlan(w http.ResponseWriter, r *http.Request) {
 
 	targetAudience := "14-year-old niece" // Still hardcoded
 
-	// Pass UserID to the service
-	plan, err := h.planService.CreatePlanForUser(r.Context(), userClaims.UserID, req.Topic, req.DurationDays, targetAudience)
+	// Pass the authenticated user's ID to the service
+	plan, err := h.planService.CreatePlan(r.Context(), userClaims.UserID, req.Topic, req.DurationDays, targetAudience)
 	if err != nil {
 		log.Printf("ERROR: Plan creation failed for user %s: %v", userClaims.UserID, err)
 		writeError(w, "Failed to create reading plan.", http.StatusInternalServerError)
@@ -310,7 +312,8 @@ func (h *APIHandler) HandleListPlans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	plans, err := h.planService.ListUserPlans(r.Context(), userClaims.UserID)
+	// Get plans for this specific user
+	plans, err := h.planService.ListPlans(r.Context(), userClaims.UserID)
 	if err != nil {
 		log.Printf("ERROR: Failed to list plans for user %s: %v", userClaims.UserID, err)
 		writeError(w, "Failed to retrieve plan list", http.StatusInternalServerError)
@@ -327,21 +330,39 @@ func (h *APIHandler) HandleGetPlanVerseToday(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Assuming GetActiveVerseForToday is adapted to take userID or finds it implicitly
-	// Let's modify the service layer signature later if needed.
-	// For now, assume planService can find the *user's* active plan.
+	// Check if plan exists
 	verse, err := h.planService.GetActiveVerseForToday(r.Context(), userClaims.UserID)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) { // Use a generic NotFound error
+		if err.Error() == "no active reading plan found" {
 			writeError(w, "No active reading plan found for today.", http.StatusNotFound)
-		} else if errors.Is(err, service.ErrPlanFinished) { // Custom error from service
-			writeError(w, "Your reading plan is finished!", http.StatusOK) // OK status, but special message
+		} else if errors.Is(err, repository.ErrDayOutOfRange) {
+			writeError(w, "Your reading plan is finished!", http.StatusOK)
 		} else {
 			log.Printf("ERROR: Failed to get today's plan verse for user %s: %v", userClaims.UserID, err)
 			writeError(w, "Failed to retrieve today's verse", http.StatusInternalServerError)
 		}
 		return
 	}
+
+	// Check if client explicitly requests no content via query parameter
+	skipContent := r.URL.Query().Get("content") == "false"
+
+	if !skipContent {
+		// By default, get full verse content using the verse service
+		enrichedVerse, err := h.planService.GetEnrichedVerseForToday(r.Context(), userClaims.UserID, h.verseService)
+		if err == nil {
+			// Return the verse with full content
+			writeJSON(w, http.StatusOK, enrichedVerse)
+			return
+		}
+
+		// Still return the verse with just the reference, but add an error message
+		verse.Text = "[Error fetching verse content. Please try again.]"
+		writeJSON(w, http.StatusOK, verse)
+		return
+	}
+
+	// Only return the reference and title if explicitly requested
 	writeJSON(w, http.StatusOK, verse)
 }
 

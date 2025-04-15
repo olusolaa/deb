@@ -42,4 +42,29 @@ func Load() *Config {
 	viper.SetDefault("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/google/callback") // Default callback URL
 
 	// Enable Viper to read Environment Variables
-	vip
+	viper.AutomaticEnv()
+
+	// Make environment variables case-insensitive and replace dots with underscores
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Read configuration file
+	if err := viper.ReadInConfig(); err != nil {
+		log.Printf("WARN: Config file not found: %v\n", err)
+	}
+
+	// Initialize Config
+	cfg := &Config{
+		Port:               viper.GetString("PORT"),
+		CorsAllowedOrigin:  viper.GetString("CORS_ALLOWED_ORIGIN"),
+		OpenRouterAPIKey:   viper.GetString("OPENROUTER_API_KEY"),
+		OpenRouterBaseURL:  viper.GetString("OPENROUTER_BASE_URL"),
+		LLMModelName:       viper.GetString("LLM_MODEL_NAME"),
+		MongoDBURI:         viper.GetString("MONGODB_URI"),
+		GoogleClientID:     viper.GetString("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: viper.GetString("GOOGLE_CLIENT_SECRET"),
+		GoogleRedirectURL:  viper.GetString("GOOGLE_REDIRECT_URL"),
+		JWTSecret:          viper.GetString("JWT_SECRET"),
+	}
+
+	return cfg
+}

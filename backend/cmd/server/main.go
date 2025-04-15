@@ -6,9 +6,13 @@ import (
 	"bibleapp/backend/internal/llm"
 	"bibleapp/backend/internal/repository"
 	"bibleapp/backend/internal/service"
+	"context"
 	"log"
 	"net/http"
-	// "time" // Needed if adding server timeouts
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"time"
 )
 
 func main() {
@@ -17,20 +21,54 @@ func main() {
 
 	// --- Dependency Injection ---
 
-	// 1. Repositories
-	planRepo := repository.NewInMemoryPlanRepository() // Use in-memory repo
+	// 1. Set up MongoDB connection
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	// 2. External Clients (LLM)
-	// Use a more capable model for planning if configured, else default
-	planningModelName := cfg.LLMModelName // Maybe add a specific PLANNING_LLM_MODEL_NAME config later
+	// Direct connection to MongoDB using the driver
+	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.MongoDBURI))
+	if err != nil {
+		log.Fatalf("FATAL: Could not connect to MongoDB: %v", err)
+	}
+
+	// Ping MongoDB to verify connection
+	if err = mongoClient.Ping(ctx, nil); err != nil {
+		log.Fatalf("FATAL: Could not ping MongoDB: %v", err)
+	}
+
+	defer func() {
+		if err = mongoClient.Disconnect(context.Background()); err != nil {
+			log.Printf("ERROR: Failed to disconnect MongoDB client: %v", err)
+		}
+	}()
+
+	mongoDB := mongoClient.Database("bibleapp")
+
+	// 2. Repositories
+	planRepo := repository.NewMongoPlanRepository(mongoDB)
+	userRepo := repository.NewMongoUserRepository(mongoDB)
+
+	// 3. External Clients (LLM)
+	planningModelName := cfg.LLMModelName
 	openRouterClient := llm.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterBaseURL)
 
-	// 3. Services
-	chatService := service.NewChatService(openRouterClient, cfg.LLMModelName) // Chat can use default model
-	planService := service.NewPlanService(planRepo, openRouterClient)         // Plan service needs repo and LLM
+	// 4. Services
+	// Create verse repository that uses LLM to fetch verse content on-demand
+	verseRepo := repository.NewLLMVerseRepository(openRouterClient, cfg.LLMModelName)
 
-	// 4. API Handler (Inject PlanService, remove old VerseService if unused)
-	apiHandler := api.NewAPIHandler(chatService, planService)
+	// Create all services
+	chatService := service.NewChatService(openRouterClient, cfg.LLMModelName)
+	verseService := service.NewVerseService(verseRepo)
+	planService := service.NewPlanService(planRepo, openRouterClient, planningModelName)
+
+	// Set up Google OAuth config
+	googleOAuthConfig := service.SetupGoogleOAuthConfig(cfg)
+
+	// Create auth service with proper dependencies
+	authService := service.NewAuthService(googleOAuthConfig, userRepo, cfg.JWTSecret) // Auth service for Google OAuth
+
+	// 4. API Handler (Inject all services)
+	apiHandler := api.NewAPIHandler(chatService, planService, verseService, authService, cfg.JWTSecret)
 
 	// 5. Router
 	router := api.NewRouter(apiHandler, cfg.CorsAllowedOrigin)

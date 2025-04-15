@@ -9,12 +9,14 @@ import (
 type DailyVerse struct {
 	DayNumber   int    `json:"day"`                   // Day number within the plan (1-based)
 	Reference   string `json:"reference"`             // e.g., "John 3:16-18"
-	Text        string `json:"text"`                  // The actual verse text (provided by LLM)
-	Explanation string `json:"explanation,omitempty"` // Optional brief explanation for the niece
+	Text        string `json:"text"`                  // The actual verse text (fetched later)
+	Title       string `json:"title"`                 // Short title for the day's reading
+	Explanation string `json:"explanation,omitempty"` // Optional detailed explanation (fetched later)
 }
 
 type ReadingPlan struct {
 	ID             uuid.UUID    `json:"id"`
+	UserID         string       `json:"user_id,omitempty"` // Associated user ID
 	Topic          string       `json:"topic"`
 	DurationDays   int          `json:"duration_days"`
 	TargetAudience string       `json:"target_audience"` // Store the audience for context

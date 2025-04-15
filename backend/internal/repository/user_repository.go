@@ -49,7 +49,48 @@ func NewMongoUserRepository(db *mongo.Database) *MongoUserRepository {
 		log.Printf("WARN: Could not create indexes on users collection: %v", err)
 	}
 
-	return &MongoUserRepository{collection: collection}
+	return &MongoUserRepository{
+		collection: collection,
+	}
+}
+
+// InMemoryUserRepository implements UserRepository for local development
+type InMemoryUserRepository struct {
+	users map[string]*domain.User // Map of GoogleID -> User
+}
+
+// NewInMemoryUserRepository creates a new instance of InMemoryUserRepository
+func NewInMemoryUserRepository() *InMemoryUserRepository {
+	return &InMemoryUserRepository{
+		users: make(map[string]*domain.User),
+	}
+}
+
+// FindByGoogleID retrieves a user by their Google ID
+func (r *InMemoryUserRepository) FindByGoogleID(ctx context.Context, googleID string) (*domain.User, error) {
+	user, exists := r.users[googleID]
+	if !exists {
+		return nil, nil // Return nil, nil for not found, consistent with MongoDB implementation
+	}
+
+	return user, nil
+}
+
+// Create stores a new user in the in-memory repository
+func (r *InMemoryUserRepository) Create(ctx context.Context, user *domain.User) (*domain.User, error) {
+	// Check if user with this GoogleID already exists
+	if _, exists := r.users[user.GoogleID]; exists {
+		return nil, errors.New("user with this GoogleID already exists")
+	}
+
+	// Set timestamps if not already set
+	if user.CreatedAt.IsZero() {
+		user.CreatedAt = time.Now()
+	}
+
+	// Store user by GoogleID
+	r.users[user.GoogleID] = user
+	return user, nil
 }
 
 // FindByGoogleID finds a user by their Google ID.

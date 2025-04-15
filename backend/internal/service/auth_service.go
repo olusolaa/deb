@@ -165,13 +165,13 @@ func (s *AuthService) fetchGoogleUserInfo(ctx context.Context, token *oauth2.Tok
 func (s *AuthService) generateJWT(user *domain.User) (string, error) {
 	// Define JWT claims
 	claims := jwt.MapClaims{
-		"sub": user.ID, // Subject (standard claim) - our internal user ID
-		"gid": user.GoogleID, // Google ID (custom claim)
-		"eml": user.Email,    // Email (custom claim)
-		"nam": user.Name,     // Name (custom claim)
-		"pic": user.Picture,  // Picture URL (custom claim)
-		"iss": "bibleapp",  // Issuer (standard claim)
-		"aud": "bibleapp_users", // Audience (standard claim)
+		"sub": user.ID,                                   // Subject (standard claim) - our internal user ID
+		"gid": user.GoogleID,                             // Google ID (custom claim)
+		"eml": user.Email,                                // Email (custom claim)
+		"nam": user.Name,                                 // Name (custom claim)
+		"pic": user.Picture,                              // Picture URL (custom claim)
+		"iss": "bibleapp",                                // Issuer (standard claim)
+		"aud": "bibleapp_users",                          // Audience (standard claim)
 		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(), // Expiration time (e.g., 7 days)
 		"iat": time.Now().Unix(),                         // Issued at (standard claim)
 		"nbf": time.Now().Unix(),                         // Not before (standard claim)
@@ -207,10 +207,11 @@ func (s *AuthService) ValidateJWT(tokenString string) (jwt.MapClaims, error) {
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		// Optional: Perform additional checks on claims (e.g., issuer, audience)
-		if !claims.VerifyIssuer("bibleapp", true) {
+		// Manually check issuer and audience since MapClaims doesn't have these verification methods
+		if iss, ok := claims["iss"].(string); !ok || iss != "bibleapp" {
 			return nil, errors.New("invalid issuer")
 		}
-		if !claims.VerifyAudience("bibleapp_users", true) {
+		if aud, ok := claims["aud"].(string); !ok || aud != "bibleapp_users" {
 			return nil, errors.New("invalid audience")
 		}
 		return claims, nil

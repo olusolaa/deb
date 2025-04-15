@@ -15,52 +15,57 @@ import (
 
 // PlanService defines the interface for managing reading plans.
 type PlanService interface {
-	CreatePlan(ctx context.Context, topic string, durationDays int, targetAudience string) (domain.ReadingPlan, error)
-	GetActiveVerseForToday(ctx context.Context) (domain.DailyVerse, error)
-	ListPlans(ctx context.Context) ([]domain.ReadingPlan, error)
+	CreatePlan(ctx context.Context, userID string, topic string, durationDays int, targetAudience string) (domain.ReadingPlan, error)
+	GetActiveVerseForToday(ctx context.Context, userID string) (domain.DailyVerse, error)
+	ListPlans(ctx context.Context, userID string) ([]domain.ReadingPlan, error)
+	// New method to get a verse with its full content fetched on-demand
+	GetEnrichedVerseForToday(ctx context.Context, userID string, verseService VerseService) (domain.DailyVerse, error)
 }
 
 type planService struct {
 	planRepo  repository.PlanRepository
 	llmClient llm.LLMClient
+	modelName string // Model name from environment config
 }
 
 // NewPlanService creates a new PlanService.
-func NewPlanService(repo repository.PlanRepository, llmClient llm.LLMClient) PlanService {
+func NewPlanService(repo repository.PlanRepository, llmClient llm.LLMClient, modelName string) PlanService {
 	return &planService{
 		planRepo:  repo,
 		llmClient: llmClient,
+		modelName: modelName,
 	}
 }
 
 func (c *planService) generateReadingPlan(ctx context.Context, topic string, durationDays int, targetAudience string) (domain.ReadingPlan, error) {
 	var plan domain.ReadingPlan // Return an empty plan on error
 
-	// --- Construct the complex prompt for plan generation ---
-	// This prompt is CRITICAL and may need significant tuning.
-	// We explicitly ask for JSON output.
-	systemPrompt := fmt.Sprintf(`You are an expert Bible study planner creating a reading plan for a %s.
-The plan should focus on the topic: "%s".
-The plan duration is %d days.
-For EACH day, provide:
-1.  A concise Bible reference (e.g., "Genesis 1:1-5" or "Psalm 23:1-3"). Keep daily readings digestible, not too long.
-2.  The FULL TEXT of the verses for that reference.
-3.  A VERY BRIEF, simple, encouraging explanation (1-2 sentences) suitable for the target audience, explaining the core idea of that day's reading.
-4.  Ensure the verses selected are appropriate and understandable for the audience, avoiding overly complex theological debates, obscure laws, excessive violence, or genealogies unless essential to the topic (and if essential, explain simply). Focus on narrative, core teachings, psalms, proverbs, and key events related to the topic.
+	// --- Construct the prompt for plan generation ---
+	// This prompt is designed to only get verse references and brief explanations, NOT full verse text
+	systemPrompt := fmt.Sprintf(`Create a %d-day Bible reading plan on "%s" for a %s.
 
-IMPORTANT: Respond ONLY with a valid JSON object representing the plan. The JSON object should have a single key "daily_verses" which is an array. Each element in the array should be an object with the keys "day" (int, 1-based day number), "reference" (string), "text" (string), and "explanation" (string). Do NOT include any other text, preamble, or explanation outside the JSON structure. Example format for one day: {"day": 1, "reference": "John 1:1-5", "text": "In the beginning was the Word...", "explanation": "This introduces Jesus as the Word..."}
-`, targetAudience, topic, durationDays)
+For each day, provide ONLY:
+1. Day number
+2. Bible reference only (no full verse text)
+3. A short title (5 words max)
 
-	userPrompt := fmt.Sprintf(`Generate the %d-day reading plan about "%s" for a %s in the specified JSON format.`, durationDays, topic, targetAudience)
+Output ONLY a JSON object with format: {"daily_verses": [{"day": 1, "reference": "John 1:1-5", "text": "", "title": "Short Title Here", "explanation": ""}]}
 
+Make sure to use the "title" field, NOT "explanation" field for the short title.
+The actual verse text and explanations will be fetched separately later.
+NEVER include actual verse text.`, durationDays, topic, targetAudience)
+
+	userPrompt := fmt.Sprintf(`Create a %d-day reading plan on "%s". Return only the JSON object with verse references.`, durationDays, topic)
+
+	// Use the model from config, not hardcoded
 	request := llm.ChatCompletionRequest{
-		Model: "openai/gpt-4o", // Use a powerful model capable of following complex instructions and JSON formatting. GPT-3.5 might struggle. Adjust if needed.
+		Model: c.modelName, // Use the model configured in environment
 		Messages: []llm.Message{
 			{Role: "system", Content: systemPrompt},
 			{Role: "user", Content: userPrompt},
 		},
-		MaxTokens:   1500, // Increase max tokens significantly for plan generation
-		Temperature: 0.5,  // Lower temperature for more focused, structured output
+		MaxTokens:   800, // Further reduce token consumption to stay within limits
+		Temperature: 0.3, // Lower temperature for more focused, structured output
 		ResponseFormat: &llm.ResponseFormat{ // Request JSON output if the model/API supports it
 			Type: "json_object",
 		},
@@ -107,6 +112,7 @@ IMPORTANT: Respond ONLY with a valid JSON object representing the plan. The JSON
 	}
 
 	// Populate the rest of the plan details
+	// Note: UserID is set in the CreatePlan method, not here
 	plan.Topic = topic
 	plan.DurationDays = durationDays
 	plan.TargetAudience = targetAudience
@@ -117,7 +123,7 @@ IMPORTANT: Respond ONLY with a valid JSON object representing the plan. The JSON
 
 }
 
-func (s *planService) CreatePlan(ctx context.Context, topic string, durationDays int, targetAudience string) (domain.ReadingPlan, error) {
+func (s *planService) CreatePlan(ctx context.Context, userID string, topic string, durationDays int, targetAudience string) (domain.ReadingPlan, error) {
 	if topic == "" || durationDays <= 0 || targetAudience == "" {
 		return domain.ReadingPlan{}, errors.New("topic, positive duration, and target audience are required")
 	}
@@ -130,6 +136,9 @@ func (s *planService) CreatePlan(ctx context.Context, topic string, durationDays
 		return domain.ReadingPlan{}, fmt.Errorf("failed to generate reading plan: %w", err)
 	}
 
+	// Set the user ID
+	plan.UserID = userID
+
 	// Validate basic plan structure
 	if len(plan.DailyVerses) == 0 {
 		log.Printf("ERROR: LLM generated an empty plan for topic '%s'", topic)
@@ -138,7 +147,7 @@ func (s *planService) CreatePlan(ctx context.Context, topic string, durationDays
 	// Ideally, check if len(plan.DailyVerses) roughly matches durationDays, but LLM might adjust.
 
 	// Save the generated plan
-	err = s.planRepo.SavePlan(ctx, &plan)
+	err = s.planRepo.Save(ctx, &plan)
 	if err != nil {
 		log.Printf("ERROR: Failed to save generated plan: %v", err)
 		return domain.ReadingPlan{}, fmt.Errorf("failed to save reading plan: %w", err)
@@ -146,27 +155,32 @@ func (s *planService) CreatePlan(ctx context.Context, topic string, durationDays
 
 	// The saved plan now has an ID and CreatedAt timestamp
 	// Refetch it to return the complete object (optional but good practice)
-	savedPlan, err := s.planRepo.GetPlanByID(ctx, plan.ID)
-	if err != nil {
+	savedPlan, err := s.planRepo.FindByID(ctx, plan.ID.String())
+	if err != nil || savedPlan == nil {
 		log.Printf("WARN: Failed to refetch saved plan %s, returning generated plan: %v", plan.ID, err)
-		return plan, nil // Return the original plan if refetch fails
+		return plan, nil // Return the original plan if refetch fails or returns nil
 	}
 
 	log.Printf("INFO: Successfully created and saved plan %s for topic '%s'", savedPlan.ID, topic)
-	return savedPlan, nil
+	return *savedPlan, nil
 }
 
-func (s *planService) GetActiveVerseForToday(ctx context.Context) (domain.DailyVerse, error) {
+func (s *planService) GetActiveVerseForToday(ctx context.Context, userID string) (domain.DailyVerse, error) {
 	// Get the latest plan (considered active)
-	activePlan, err := s.planRepo.GetLatestPlan(ctx)
+	// Note: We're still using a placeholder implementation that gets all plans and uses the first one
+	plans, err := s.planRepo.FindByUser(ctx, userID)
 	if err != nil {
-		if errors.Is(err, repository.ErrNoActivePlan) {
-			log.Println("INFO: No active reading plan found.")
-			return domain.DailyVerse{}, err // Propagate specific error
-		}
-		log.Printf("ERROR: Failed to get latest plan: %v", err)
-		return domain.DailyVerse{}, fmt.Errorf("could not retrieve active plan: %w", err)
+		log.Printf("ERROR: Failed to get plans: %v", err)
+		return domain.DailyVerse{}, fmt.Errorf("could not retrieve plans: %w", err)
 	}
+
+	if len(plans) == 0 {
+		log.Println("INFO: No reading plans found.")
+		return domain.DailyVerse{}, fmt.Errorf("no active reading plan found")
+	}
+
+	// For simplicity, consider the first plan as the active plan
+	activePlan := plans[0]
 
 	// Calculate which day of the plan it is
 	// Use UTC to avoid timezone issues with day calculation
@@ -195,11 +209,35 @@ func (s *planService) GetActiveVerseForToday(ctx context.Context) (domain.DailyV
 	return verse, nil
 }
 
-func (s *planService) ListPlans(ctx context.Context) ([]domain.ReadingPlan, error) {
-	plans, err := s.planRepo.ListAllPlans(ctx)
+func (s *planService) ListPlans(ctx context.Context, userID string) ([]domain.ReadingPlan, error) {
+	// Get all plans for this user
+	plans, err := s.planRepo.FindByUser(ctx, userID)
 	if err != nil {
 		log.Printf("ERROR: Failed to list plans: %v", err)
 		return nil, fmt.Errorf("failed to retrieve plan list: %w", err)
 	}
-	return plans, nil
+	// Convert from []*domain.ReadingPlan to []domain.ReadingPlan
+	result := make([]domain.ReadingPlan, len(plans))
+	for i, plan := range plans {
+		result[i] = *plan
+	}
+	return result, nil
+}
+
+// GetEnrichedVerseForToday gets today's verse and enriches it with full text content on-demand
+func (s *planService) GetEnrichedVerseForToday(ctx context.Context, userID string, verseService VerseService) (domain.DailyVerse, error) {
+	// First, get today's verse from the active plan
+	verse, err := s.GetActiveVerseForToday(ctx, userID)
+	if err != nil {
+		return domain.DailyVerse{}, err
+	}
+
+	// Use the verse service to fetch the full content
+	enrichedVerse, err := verseService.EnrichDailyVerse(ctx, verse)
+	if err != nil {
+		log.Printf("ERROR: Failed to enrich verse with content: %v", err)
+		return verse, fmt.Errorf("failed to fetch verse content: %w", err)
+	}
+
+	return enrichedVerse, nil
 }
