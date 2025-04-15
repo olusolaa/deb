@@ -1,13 +1,29 @@
 /* Global Styles & App Container */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #eaeeeb; /* Light green-gray background */
-  color: #333;
+  background: linear-gradient(135deg, #8A2BE2, #4A00E0); /* Deep purple gradient */
+  background-attachment: fixed;
+  color: #ffffff;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+  z-index: -1;
 }
 
 code {
@@ -28,14 +44,16 @@ main {
 
 /* Navigation */
 .main-nav {
-  background-color: #4a7c59; /* Dark green */
-  padding: 0.8rem 1rem;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: #272727; /* Dark background */
+  padding: 1rem 1.5rem;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   display: flex;
   justify-content: space-between; /* Push links and logout button apart */
   align-items: center;
   margin-top: 1rem;
+  position: relative;
+  z-index: 10;
 }
 
 .main-nav ul {
@@ -48,49 +66,97 @@ main {
 
 .main-nav a {
   text-decoration: none;
-  color: #ffffff; /* White text for contrast on green */
-  font-weight: 500;
-  transition: color 0.2s ease;
+  color: #ffffff; /* White text for contrast on dark */
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+  background-color: transparent;
 }
 
 .main-nav a:hover, .main-nav a:focus {
-  color: #d9e5d6; /* Light green on hover */
+  background-color: rgba(255, 255, 255, 0.15); /* White highlight */
+  color: #ffffff; /* Keep white text */
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 .logout-button {
-  background-color: #2f4b26; /* Darker green for logout */
+  background-color: #FF5D8F; /* Vibrant pink for logout */
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 25px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 30px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.9rem;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 93, 143, 0.3);
 }
 
 .logout-button:hover {
-  background-color: #1d3419; /* Even darker green on hover */
+  background-color: #FF2E73; /* Brighter pink on hover */
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(255, 93, 143, 0.4);
 }
 
 
 /* Shared Page Styles */
 .page-content {
-  background-color: #4a7c59; /* Dark green */
-  padding: 1.5rem;
-  border-radius: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  margin-top: 1.5rem;
+  background-color: #272727; /* Dark background */
+  padding: 2rem;
+  border-radius: 30px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  margin-top: 2rem;
   color: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-content::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background-color: rgba(255, 93, 143, 0.1); /* Pink accent */
+}
+
+.page-content::after {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  left: -60px;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background-color: rgba(100, 216, 255, 0.08); /* Blue accent */
+  z-index: 0;
 }
 
 .page-header {
-  font-size: 2rem;
-  font-weight: 600;
+  font-size: 2.4rem;
+  font-weight: 700;
   color: #ffffff; /* White text for contrast */
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Subtle separator */
-  padding-bottom: 0.8rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  position: relative;
+  display: inline-block;
+  z-index: 1;
+}
+
+.page-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  height: 5px;
+  background: linear-gradient(90deg, #FF5D8F, #64D8FF); /* Gradient underline */
+  border-radius: 10px;
 }
 
 /* Common Loading/Error Styles */
@@ -127,13 +193,19 @@ main {
 /* Basic Button Styling (can be overridden) */
 button {
   cursor: pointer;
-  padding: 0.6rem 1.2rem;
-  border-radius: 25px;
+  padding: 0.7rem 1.5rem;
+  border-radius: 20px;
   border: none;
-  font-weight: 500;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-  background-color: #2f4b26; /* Darker green default */
-  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  background-color: #64D8FF; /* Vibrant blue default */
+  color: #272727;
+  box-shadow: 0 4px 15px rgba(100, 216, 255, 0.3);
+}
+
+button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(100, 216, 255, 0.4);
 }
 
 button:disabled {

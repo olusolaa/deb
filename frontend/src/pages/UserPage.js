@@ -115,7 +115,7 @@ function UserPage() {
 
     return (
         <div className="page-content">
-            <header className="page-header"> Verse of the Day </header>
+            <header className="page-header">Today's Inspiration</header>
 
             {/* Verse Display Area */}
             <div className="verse-container">
@@ -141,7 +141,7 @@ function UserPage() {
             {dailyVerse && !verseError && (
                 <div className="chatbot-container">
                     <div className="chat-header">
-                        <h3>Ask about this reading!</h3>
+                        <h3>Chat with me!</h3>
                         <button
                             onClick={handleResetChat}
                             className="reset-button"
@@ -169,16 +169,16 @@ function UserPage() {
                             className="chat-input"
                             value={chatQuestion}
                             onChange={(e) => setChatQuestion(e.target.value)}
-                            placeholder="Type your question..."
+                            placeholder="Ask me anything about this verse..."
                             disabled={isChatLoading}
                         />
                         <button
                             type="submit"
                             className="send-button"
                             disabled={isChatLoading || !chatQuestion.trim()}
-                            title="Ask question"
+                            title="Send message"
                         >
-                            {isChatLoading ? '...' : '→'}
+                            {isChatLoading ? '...' : '▶'}
                         </button>
                     </form>
                 </div>
