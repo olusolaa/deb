@@ -8,7 +8,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #8A2BE2, #4A00E0); /* Deep purple gradient */
+  background: linear-gradient(125deg, #131313, #101935); /* Dark modern gradient */
   background-attachment: fixed;
   color: #ffffff;
   overflow-x: hidden;
@@ -22,8 +22,23 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+  background: radial-gradient(circle at 15% 50%, rgba(255, 0, 136, 0.07) 0%, rgba(255, 0, 136, 0) 45%),
+             radial-gradient(circle at 85% 30%, rgba(0, 255, 255, 0.07) 0%, rgba(0, 255, 255, 0) 50%),
+             radial-gradient(circle at 50% 90%, rgba(255, 214, 0, 0.05) 0%, rgba(255, 214, 0, 0) 45%);
   z-index: -1;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.5;
+  z-index: -1;
+  pointer-events: none;
 }
 
 code {
@@ -44,10 +59,13 @@ main {
 
 /* Navigation */
 .main-nav {
-  background-color: #272727; /* Dark background */
+  background: rgba(30, 30, 40, 0.8); /* Semi-transparent dark background */
   padding: 1rem 1.5rem;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(114, 236, 255, 0.2);
   display: flex;
   justify-content: space-between; /* Push links and logout button apart */
   align-items: center;
@@ -76,14 +94,15 @@ main {
 }
 
 .main-nav a:hover, .main-nav a:focus {
-  background-color: rgba(255, 255, 255, 0.15); /* White highlight */
-  color: #ffffff; /* Keep white text */
+  background: linear-gradient(135deg, rgba(114, 236, 255, 0.2), rgba(120, 80, 255, 0.2)); /* Subtle gradient */
+  color: #72ECFF; /* Bright cyan text */
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 5px 15px rgba(114, 236, 255, 0.2);
+  text-shadow: 0 0 8px rgba(114, 236, 255, 0.5);
 }
 
 .logout-button {
-  background-color: #FF5D8F; /* Vibrant pink for logout */
+  background: linear-gradient(135deg, #FF427A, #FF00BA); /* Hot pink gradient */
   color: white;
   border: none;
   padding: 0.6rem 1.2rem;
@@ -92,7 +111,8 @@ main {
   font-weight: 600;
   font-size: 0.9rem;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(255, 93, 143, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 66, 122, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .logout-button:hover {
@@ -104,14 +124,17 @@ main {
 
 /* Shared Page Styles */
 .page-content {
-  background-color: #272727; /* Dark background */
-  padding: 2rem;
-  border-radius: 30px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(18, 18, 35, 0.9), rgba(28, 28, 45, 0.9)); /* Transparent dark gradient */
+  padding: 2.5rem 2rem;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   margin-top: 2rem;
   color: #ffffff;
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(72, 49, 212, 0.1);
 }
 
 .page-content::before {
@@ -198,9 +221,12 @@ button {
   border: none;
   font-weight: 600;
   transition: all 0.3s ease;
-  background-color: #64D8FF; /* Vibrant blue default */
-  color: #272727;
-  box-shadow: 0 4px 15px rgba(100, 216, 255, 0.3);
+  background: linear-gradient(135deg, #72ECFF, #4D6EFF); /* Cyan to blue gradient */
+  color: white;
+  box-shadow: 0 8px 20px rgba(114, 236, 255, 0.25);
+  letter-spacing: 0.3px;
+  position: relative;
+  z-index: 1;
 }
 
 button:hover {

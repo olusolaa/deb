@@ -2,17 +2,17 @@
 
 /* Verse Container Styles */
 .verse-container {
-  background: linear-gradient(135deg, #FF0099, #493240); /* Hot pink to deep purple gradient */
+  background: linear-gradient(125deg, #1e1e30, #2a1b48); /* Deep, dark gradient base */
   padding: 2rem;
   margin-bottom: 2.5rem;
-  border-radius: 30px;
-  box-shadow: 0 10px 30px rgba(255, 0, 153, 0.3);
+  border-radius: 24px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
   position: relative;
   overflow: hidden;
   transition: all 0.4s ease;
   z-index: 1;
   backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(114, 236, 255, 0.3);
 }
 
 .verse-container:hover {
@@ -54,22 +54,21 @@
 .verse-reference {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #00FFFF; /* Neon cyan */
-  margin-bottom: 0.8rem;
+  color: #72ECFF; /* Bright cyan - extremely visible */
+  margin-bottom: 1rem;
   letter-spacing: -0.5px;
   display: inline-block;
   position: relative;
   padding: 5px 15px;
   line-height: 1.2;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
-  background: rgba(0, 0, 0, 0.2);
+  text-shadow: 0 0 10px rgba(114, 236, 255, 0.5);
+  background: rgba(114, 236, 255, 0.1);
   border-radius: 12px;
-  transform: rotate(-1deg);
-  filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.4));
+  border-left: 3px solid #72ECFF;
 }
 
 .verse-text {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   line-height: 1.7;
   color: #FFFFFF;
   margin-bottom: 1.2rem;
@@ -77,20 +76,22 @@
   position: relative;
   padding: 20px 0;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+  letter-spacing: 0.2px;
 }
 
 .verse-explanation {
   font-size: 1.1rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
   font-style: normal;
   margin-top: 1.5rem;
-  padding: 1.2rem;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(75, 0, 130, 0.5));
+  padding: 1.2rem 1.5rem;
+  background: rgba(20, 20, 40, 0.5);
   border-radius: 16px;
   position: relative;
   backdrop-filter: blur(5px);
-  border-left: 3px solid #00FFFF;
-  animation: subtle-glow 3s ease-in-out infinite alternate;
+  border-left: 3px solid rgba(114, 236, 255, 0.8);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), inset 0 0 15px rgba(114, 236, 255, 0.05);
 }
 
 @keyframes subtle-glow {
@@ -100,9 +101,10 @@
 
 .verse-explanation strong {
   font-weight: 700;
-  color: #64D8FF; /* Bright blue */
+  color: #FF427A; /* Hot pink - contrasts well with cyan */
   display: inline-block;
   position: relative;
+  letter-spacing: 0.3px;
 }
 
 .verse-explanation strong::after {
@@ -119,19 +121,18 @@
 
 /* Chatbot Container Styles */
 .chatbot-container {
-  border: 2px solid rgba(0, 255, 255, 0.2);
-  border-radius: 30px;
+  border: 1px solid rgba(114, 236, 255, 0.3);
+  border-radius: 24px;
   overflow: hidden; /* Keep inner elements contained */
   margin-top: 3rem;
   display: flex;
   flex-direction: column;
   max-height: 70vh; /* Limit height, adjust as needed */
-  background: linear-gradient(135deg, rgba(10, 10, 30, 0.7), rgba(45, 10, 80, 0.7));
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 255, 255, 0.2);
+  background: linear-gradient(125deg, rgba(18, 18, 35, 0.9), rgba(32, 18, 58, 0.9));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(10px);
   position: relative;
   z-index: 5;
-  animation: pulse-border 4s ease-in-out infinite;
 }
 
 @keyframes pulse-border {
@@ -152,7 +153,7 @@
 }
 
 .chat-header {
-  background: linear-gradient(90deg, #FF0099, #493240); /* Match verse container gradient */
+  background: linear-gradient(90deg, #4D6EFF, #4831D4); /* Blue to purple gradient for better readability */
   padding: 1.2rem 1.5rem;
   border-bottom: none;
   display: flex;
@@ -160,7 +161,6 @@
   align-items: center;
   position: relative;
   overflow: hidden;
-  clip-path: polygon(0 0, 100% 0, 100% 85%, 95% 100%, 0 100%); /* Angular cut corner */
 }
 
 .chat-header::after {
@@ -184,7 +184,7 @@
 }
 
 .chat-header h3::before {
-  content: '🔥'; /* Emoji icon */
+  content: '💬'; /* Speech bubble emoji - clearer meaning */
   font-size: 1.2rem;
 }
 
@@ -219,9 +219,9 @@
   display: flex;
   flex-direction: column;
   gap: 1.2rem; /* Space between messages */
-  background-color: rgba(20, 20, 20, 0.6);
+  background-color: rgba(16, 16, 30, 0.7);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(114, 236, 255, 0.3) transparent;
 }
 
 /* Custom scrollbar */
@@ -261,14 +261,16 @@
 }
 
 .chat-message.user {
-  background: linear-gradient(135deg, #FF0099, #FF5D8F); /* Hot pink gradient */
+  background: linear-gradient(135deg, #FF427A, #FF7940); /* Hot pink to orange gradient - clearly visible */
   color: white;
-  border-radius: 25px 25px 0 25px;
+  border-radius: 20px 20px 4px 20px;
   align-self: flex-end; /* Align user messages to the right */
   position: relative;
   transition: all 0.3s ease;
   transform-origin: bottom right;
   animation: pop-in-right 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  letter-spacing: 0.2px;
+  font-weight: 500;
 }
 
 @keyframes pop-in-right {
@@ -294,14 +296,16 @@
 }
 
 .chat-message.assistant {
-  background: linear-gradient(135deg, #00FFFF, #64D8FF); /* Cyan to blue gradient */
-  color: #272727;
-  border-radius: 25px 25px 25px 0;
+  background: linear-gradient(135deg, #72ECFF, #4D6EFF); /* Bright cyan to blue gradient - excellent contrast */
+  color: #111111;
+  border-radius: 20px 20px 20px 4px;
   align-self: flex-start; /* Align assistant messages to the left */
   position: relative;
   transition: all 0.3s ease;
   transform-origin: bottom left;
   animation: pop-in-left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  letter-spacing: 0.2px;
+  font-weight: 500;
 }
 
 @keyframes pop-in-left {
@@ -401,27 +405,28 @@
   display: flex;
   padding: 1.5rem;
   border-top: none;
-  background-color: rgba(25, 25, 25, 0.7);
+  background-color: rgba(16, 16, 30, 0.8);
   backdrop-filter: blur(10px);
   position: relative;
   z-index: 10;
-  border-bottom-left-radius: 30px;
-  border-bottom-right-radius: 30px;
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
 }
 
 .chat-input {
   flex-grow: 1;
   padding: 1rem 1.5rem;
-  border: 2px solid rgba(0, 255, 255, 0.3);
-  background-color: rgba(10, 10, 30, 0.6);
+  border: 1px solid rgba(114, 236, 255, 0.3);
+  background-color: rgba(20, 20, 40, 0.6);
   color: white;
-  border-radius: 30px; /* Ultra rounded input field */
+  border-radius: 20px; /* Slightly less rounded for clarity */
   margin-right: 1rem;
   font-size: 1rem;
   font-weight: 500;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2), inset 0 0 10px rgba(0, 255, 255, 0.05);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(30, 30, 50, 0.5);
   transition: all 0.3s ease;
   backdrop-filter: blur(5px);
+  letter-spacing: 0.3px;
 }
 
 .chat-input::placeholder {
@@ -430,29 +435,28 @@
 
 .chat-input:focus {
   outline: none;
-  border-color: rgba(255, 93, 143, 0.5);
-  box-shadow: 0 5px 20px rgba(255, 93, 143, 0.2);
-  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(114, 236, 255, 0.7);
+  box-shadow: 0 5px 20px rgba(114, 236, 255, 0.15);
+  background-color: rgba(30, 30, 50, 0.8);
   transform: translateY(-2px);
 }
 
 .send-button {
-  background: linear-gradient(135deg, #FF0099, #9B6EF3); /* Hot pink to purple gradient */
+  background: linear-gradient(135deg, #4D6EFF, #4831D4); /* Blue to purple gradient - matches header */
   color: white;
-  border-radius: 50%; /* Circular button */
+  border-radius: 20px; /* Squared a bit for clarity */
   padding: 0;
   font-weight: 700;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   width: 3.5rem;
   height: 3.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 5px 15px rgba(255, 0, 153, 0.4), 0 0 20px rgba(0, 255, 255, 0.2);
+  box-shadow: 0 5px 15px rgba(77, 110, 255, 0.3);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
-  animation: pulse-glow 4s ease-in-out infinite;
 }
 
 @keyframes pulse-glow {
@@ -478,8 +482,9 @@
 }
 
 .send-button:hover {
-  transform: translateY(-5px) scale(1.05);
-  box-shadow: 0 10px 25px rgba(155, 110, 243, 0.5);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(77, 110, 255, 0.4);
+  background: linear-gradient(135deg, #4D6EFF, #7661FF); /* Slightly lighter on hover */
 }
 
 .send-button:disabled {
