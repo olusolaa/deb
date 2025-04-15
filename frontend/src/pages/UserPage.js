@@ -1,152 +1,117 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'; // Import useRef, useCallback
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import apiClient from '../api/axiosConfig'; // *** Use Axios Client ***
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 import '../App.css';
-import './UserPage.css'; // Add page-specific styles
+import './UserPage.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
-const API_URL = `${API_BASE_URL}/api`;
 // Define message type constants
 const MSG_TYPE = {
     USER: 'user',
     ASSISTANT: 'assistant',
     ERROR: 'error',
-    INFO: 'info', // For messages like "Chat reset"
+    INFO: 'info',
 };
 
 function UserPage() {
+    const { user } = useAuth(); // Get user info if needed
     const [dailyVerse, setDailyVerse] = useState(null);
     const [isLoadingVerse, setIsLoadingVerse] = useState(true);
     const [verseError, setVerseError] = useState(null);
 
     const [chatQuestion, setChatQuestion] = useState('');
-    // *** Store the entire chat history ***
     const [chatHistory, setChatHistory] = useState([]);
     const [isChatLoading, setIsChatLoading] = useState(false);
-    // We'll display chat errors directly in the history now
-    // const [chatError, setChatError] = useState(null);
 
-    // Ref for scrolling chat to bottom
     const chatEndRef = useRef(null);
 
-    // Function to scroll chat window
     const scrollToBottom = () => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    // Scroll whenever chatHistory changes
     useEffect(() => {
         scrollToBottom();
     }, [chatHistory]);
 
-
-    // Fetch today's verse
-    const fetchVerse = useCallback(async () => { // Wrap in useCallback
+    // Fetch today's verse using apiClient
+    const fetchVerse = useCallback(async () => {
         setIsLoadingVerse(true);
         setVerseError(null);
         setDailyVerse(null);
+        // Clear chat history when fetching a new verse?
+        // setChatHistory([]);
         try {
-            const response = await fetch(`${API_URL}/plans/today`);
-            if (!response.ok) {
-                const errorBody = await response.json();
-                if (response.status === 404) {
-                    throw new Error(errorBody.error || "No active plan or plan finished.");
-                }
-                throw new Error(`Network error (${response.status}): ${errorBody.error || 'Unknown error'}`);
-            }
-            const data = await response.json();
-            setDailyVerse(data);
+            // *** Use apiClient.get ***
+            const response = await apiClient.get('/api/plans/today');
+            setDailyVerse(response.data);
         } catch (error) {
             console.error("Failed to fetch today's verse:", error);
-            if (error.message.includes("No active plan") || error.message.includes("plan finished")) {
-                setVerseError("There's no reading plan active right now, or the current one has finished. Ask the admin to create one!");
+            const errorMsg = error.response?.data?.error || error.message || "Unknown error";
+            if (error.response?.status === 404 || errorMsg.includes("No active plan") || errorMsg.includes("plan finished")) {
+                setVerseError("There's no reading plan active right now, or the current one has finished. An admin might need to create one!");
+            } else if (error.response?.status === 401) {
+                // This shouldn't happen if ProtectedRoute works, but handle defensively
+                setVerseError("Authentication error. Please try logging out and back in.");
+                // Potentially call logout() from useAuth here?
             } else {
-                setVerseError(`Couldn't load today's verse. Maybe try again later? (${error.message})`);
+                setVerseError(`Couldn't load today's verse. Maybe try again later? (${errorMsg})`);
             }
         } finally {
             setIsLoadingVerse(false);
         }
-    }, []); // Empty dependency array - fetchVerse function itself doesn't change
+    }, []); // No dependencies needed for this version
 
     useEffect(() => {
         fetchVerse();
-    }, [fetchVerse]); // Run fetchVerse on mount
-
-
-    // --- Chat Handling ---
+    }, [fetchVerse]);
 
     // Add a message to the history state
     const addMessageToHistory = (role, content) => {
         setChatHistory(prev => [...prev, { role, content }]);
     };
 
-    // Handle chat submit
+    // Handle chat submit using apiClient
     const handleChatSubmit = async (e) => {
         e.preventDefault();
         const question = chatQuestion.trim();
         if (!question || !dailyVerse || isChatLoading) return;
 
-        // Add user's message to history immediately
         addMessageToHistory(MSG_TYPE.USER, question);
-        setChatQuestion(''); // Clear input
+        setChatQuestion('');
         setIsChatLoading(true);
 
         try {
-            const response = await fetch(`${API_URL}/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    verse: dailyVerse, // Send current verse context (backend decides if needed)
-                    question: question,
-                }),
+            // *** Use apiClient.post ***
+            const response = await apiClient.post('/api/chat', {
+                verse: dailyVerse,
+                question: question,
             });
-
-            const data = await response.json(); // Try parsing JSON first
-
-            if (!response.ok) {
-                // Use error from JSON body if available
-                throw new Error(data.error || `Chatbot error (${response.status})`);
-            }
-
-            // Add assistant's response to history
-            addMessageToHistory(MSG_TYPE.ASSISTANT, data.answer);
-
+            addMessageToHistory(MSG_TYPE.ASSISTANT, response.data.answer);
         } catch (error) {
             console.error("Failed to get chat response:", error);
-            // Add error message to history
-            addMessageToHistory(MSG_TYPE.ERROR, `Oops! Chatbot trouble: ${error.message}`);
+            const errorMsg = error.response?.data?.error || error.message || "Unknown error";
+            addMessageToHistory(MSG_TYPE.ERROR, `Oops! Chatbot trouble: ${errorMsg}`);
         } finally {
             setIsChatLoading(false);
         }
     };
 
-    // Handle chat reset
+    // Handle chat reset using apiClient
     const handleResetChat = async () => {
-        // Optional: Add a confirmation dialog
-        // if (!window.confirm("Are you sure you want to start a new chat?")) return;
-
-        setIsChatLoading(true); // Indicate activity
-
+        setIsChatLoading(true);
         try {
-            const response = await fetch(`${API_URL}/chat/reset`, { method: 'POST' });
-            const data = await response.json(); // Try parsing JSON
-
-            if (!response.ok) {
-                throw new Error(data.error || `Failed to reset chat (${response.status})`);
-            }
-
-            // Clear local chat history and add info message
+            // *** Use apiClient.post ***
+            const response = await apiClient.post('/api/chat/reset');
             setChatHistory([]);
-            addMessageToHistory(MSG_TYPE.INFO, "Chat history cleared. Ask a new question!");
-            console.log("Chat reset successfully:", data.message);
-
+            addMessageToHistory(MSG_TYPE.INFO, response.data.message || "Chat history cleared. Ask a new question!");
+            console.log("Chat reset successfully");
         } catch (error) {
             console.error("Failed to reset chat:", error);
-            // Add error message locally if reset fails
-            addMessageToHistory(MSG_TYPE.ERROR, `Could not reset chat: ${error.message}`);
+            const errorMsg = error.response?.data?.error || error.message || "Unknown error";
+            addMessageToHistory(MSG_TYPE.ERROR, `Could not reset chat: ${errorMsg}`);
         } finally {
             setIsChatLoading(false);
         }
     };
-
 
     return (
         <div className="page-content">
@@ -169,7 +134,7 @@ function UserPage() {
                 )}
             </div>
 
-            {/* Chatbot Section - Show only if verse loaded */}
+            {/* Chatbot Section - Show only if verse loaded and no auth error */}
             {dailyVerse && !verseError && (
                 <div className="chatbot-container">
                     <div className="chat-header">
@@ -184,24 +149,17 @@ function UserPage() {
                         </button>
                     </div>
 
-
-                    {/* Chat History Display */}
                     <div className="chat-history">
                         {chatHistory.map((msg, index) => (
                             <div key={index} className={`chat-message ${msg.role}`}>
                                 <p>{msg.content}</p>
                             </div>
                         ))}
-                        {/* Add empty div to scroll to */}
                         <div ref={chatEndRef} />
                     </div>
 
-
-                    {/* Loading Indicator inside chat */}
                     {isChatLoading && <p className="chat-loading">Thinking...</p>}
 
-
-                    {/* Chat Input Form */}
                     <form onSubmit={handleChatSubmit} className="chat-input-area">
                         <input
                             type="text"
@@ -209,12 +167,12 @@ function UserPage() {
                             value={chatQuestion}
                             onChange={(e) => setChatQuestion(e.target.value)}
                             placeholder="Type your question..."
-                            disabled={isChatLoading} // Disable input while loading
+                            disabled={isChatLoading}
                         />
                         <button
                             type="submit"
                             className="send-button"
-                            disabled={isChatLoading || !chatQuestion.trim()} // Disable if loading or empty
+                            disabled={isChatLoading || !chatQuestion.trim()}
                         >
                             {isChatLoading ? '...' : 'Ask'}
                         </button>

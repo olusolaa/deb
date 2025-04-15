@@ -1,115 +1,170 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-
-:root {
-    --primary-color: #8e44ad; /* Purple */
-    --secondary-color: #f1c40f; /* Yellow */
-    --light-bg: #f8f9fa;
-    --dark-text: #343a40;
-    --light-text: #ffffff;
-    --border-color: #dee2e6;
-    --gradient-start: #a569bd;
-    --gradient-end: #d2b4de;
-}
-
+/\* Global Styles & App Container \*/
 body {
-    margin: 0;
-    font-family: 'Poppins', sans-serif;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    line-height: 1.6;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f4f7f9; /* Light background */
+  color: #333;
 }
 
-.App {
-    max-width: 700px;
-    margin: 40px auto;
-    padding: 30px;
-    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-    border-radius: 15px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    color: var(--light-text);
-    text-align: center;
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }
 
-.App-header {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 30px;
-    color: var(--light-text); /* Ensure header text is light */
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+.AppContainer {
+  max-width: 1200px; /* Limit max width */
+  margin: 0 auto; /* Center the container */
+  padding: 0 1rem; /* Add some padding on the sides */
 }
 
+main {
+  padding-top: 1rem; /* Space below the nav */
+  padding-bottom: 2rem;
+}
 
+/* Navigation */
 .main-nav {
-    background-color: rgba(0, 0, 0, 0.1);
-    padding: 10px 0;
-    margin-bottom: 20px;
-    border-radius: 5px;
+  background-color: #ffffff;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between; /* Push links and logout button apart */
+  align-items: center;
+  margin-top: 1rem;
 }
 
 .main-nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    justify-content: center;
-    gap: 30px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 1.5rem; /* Space between nav items */
 }
 
 .main-nav a {
-    color: var(--light-text);
-    text-decoration: none;
-    font-weight: 600;
-    padding: 5px 10px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+  text-decoration: none;
+  color: #007bff; /* Primary blue */
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
-.main-nav a:hover, .main-nav a.active {
-    background-color: rgba(255, 255, 255, 0.2);
+.main-nav a:hover, .main-nav a:focus {
+  color: #0056b3; /* Darker blue on hover */
 }
 
-/* Optional main container style */
-.AppContainer {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 20px;
-    background-color: #f0f0f0; /* Lighter background for the whole page */
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+.logout-button {
+  background-color: #dc3545; /* Red for logout */
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
 }
 
-/* Keep the main App card styles but maybe rename the class */
+.logout-button:hover {
+  background-color: #c82333; /* Darker red */
+}
+
+
+/* Shared Page Styles */
 .page-content {
-    max-width: 700px;
-    margin: 0 auto; /* Center content within AppContainer */
-    padding: 30px;
-    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-    border-radius: 15px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    color: var(--light-text);
-    text-align: center;
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07);
+  margin-top: 1.5rem;
 }
 
-/* Adjust header within page-content if needed */
 .page-header {
-    font-size: 2.5rem;
-    /* ... rest of header styles ... */
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #343a40; /* Darker heading color */
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e9ecef; /* Subtle separator */
+  padding-bottom: 0.8rem;
 }
 
-/* General Loading / Error Styles */
-.loading {
-    font-style: italic;
-    color: var(--secondary-color);
-    margin: 20px 0;
-    padding: 10px;
+/* Common Loading/Error Styles */
+.loading,
+.loading-container {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d; /* Muted color */
+  font-style: italic;
 }
 
-.error { /* General error style (e.g., for verse loading) */
-    font-style: italic;
-    color: var(--error-color);
-    background-color: rgba(255, 255, 255, 0.8);
-    padding: 10px 15px;
-    border-radius: 5px;
-    margin: 20px auto; /* Center error message */
-    display: inline-block; /* Prevent full width */
+.error,
+.admin-error,
+.error-message {
+  color: #dc3545; /* Red for errors */
+  background-color: #f8d7da; /* Light red background */
+  border: 1px solid #f5c6cb;
+  padding: 0.8rem 1.2rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.success-message {
+  color: #28a745; /* Green for success */
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  padding: 0.8rem 1.2rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+/* Basic Button Styling (can be overridden) */
+button {
+  cursor: pointer;
+  padding: 0.6rem 1.2rem;
+  border-radius: 5px;
+  border: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Common Form Styles */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="email"],
+.form-group textarea {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  box-sizing: border-box; /* Include padding in width */
+  font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }

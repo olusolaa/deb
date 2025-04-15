@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import '../App.css'; // Use shared styles
-import './AdminPage.css'; // Add specific admin styles
-
-// Backend API URL from environment variable
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
-const API_URL = `${API_BASE_URL}/api/admin`;
+import React, { useState, useEffect, useCallback } from 'react';
+import apiClient from '../api/axiosConfig'; // *** Use Axios Client ***
+import { useAuth } from '../context/AuthContext'; // Import useAuth
+import '../App.css';
+import './AdminPage.css';
 
 function AdminPage() {
+    const { user } = useAuth(); // Get user info if needed (e.g., for role checks later)
     const [topic, setTopic] = useState('');
     const [duration, setDuration] = useState(7); // Default duration
     const [isLoading, setIsLoading] = useState(false);
@@ -16,30 +15,34 @@ function AdminPage() {
     const [existingPlans, setExistingPlans] = useState([]);
     const [isLoadingPlans, setIsLoadingPlans] = useState(false);
 
-    // Fetch existing plans on mount
-    const fetchPlans = async () => {
+    // Fetch existing plans using apiClient
+    const fetchPlans = useCallback(async () => {
         setIsLoadingPlans(true);
-        setError(null); // Clear previous errors
+        setError(null);
         try {
-            const response = await fetch(`${API_URL}/plans`);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch plans (${response.status})`);
-            }
-            const data = await response.json();
-            setExistingPlans(data || []); // Ensure it's an array
+            // *** Use apiClient.get ***
+            // Note: The backend endpoint was /api/plans, not /api/admin/plans
+            const response = await apiClient.get('/api/plans');
+            setExistingPlans(response.data || []); // Ensure it's an array
         } catch (err) {
             console.error("Failed to fetch plans:", err);
-            setError("Could not load existing plans.");
-            setExistingPlans([]); // Clear plans on error
+            const errorMsg = err.response?.data?.error || err.message || "Unknown error";
+            setError(`Could not load existing plans: ${errorMsg}`);
+            setExistingPlans([]);
+             if (err.response?.status === 401) {
+                // This shouldn't happen if ProtectedRoute works
+                setError("Authentication error loading plans. Please try logging out and back in.");
+            }
         } finally {
             setIsLoadingPlans(false);
         }
-    };
+    }, []); // Dependency array is empty
 
     useEffect(() => {
         fetchPlans();
-    }, []); // Fetch on mount
+    }, [fetchPlans]);
 
+    // Handle plan creation using apiClient
     const handleCreatePlan = async (e) => {
         e.preventDefault();
         if (!topic || duration <= 0) {
@@ -52,37 +55,43 @@ function AdminPage() {
         setSuccessMessage('');
 
         try {
-            const response = await fetch(`${API_URL}/plans`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    topic: topic,
-                    duration_days: parseInt(duration, 10), // Ensure integer
-                }),
+            // *** Use apiClient.post ***
+            // Note: The backend endpoint was /api/plans, not /api/admin/plans
+            const response = await apiClient.post('/api/plans', {
+                topic: topic,
+                duration_days: parseInt(duration, 10),
             });
 
-            const responseData = await response.json(); // Try to parse JSON regardless of status
-
-            if (!response.ok) {
-                throw new Error(responseData.error || `Failed to create plan (${response.status})`);
-            }
-
-
+            const responseData = response.data;
             setSuccessMessage(`Successfully created plan for "${responseData.topic}" (ID: ${responseData.id}). This is now the active plan.`);
-            setTopic(''); // Clear form
+            setTopic('');
             setDuration(7);
             fetchPlans(); // Refresh the list of plans
         } catch (err) {
             console.error("Failed to create plan:", err);
-            setError(`Plan creation failed: ${err.message}`);
+            const errorMsg = err.response?.data?.error || err.message || "Unknown error";
+            setError(`Plan creation failed: ${errorMsg}`);
+             if (err.response?.status === 401) {
+                // This shouldn't happen if ProtectedRoute works
+                setError("Authentication error creating plan. Please try logging out and back in.");
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
+    // Simple Admin check (can be expanded with roles later)
+    // if (!user) { // Should be handled by ProtectedRoute
+    //     return <p>Loading user...</p>;
+    // }
+    // Add role check here if backend provides roles in /api/me
+    // if (user && !user.isAdmin) {
+    //     return <p>Access Denied. You must be an administrator to view this page.</p>;
+    // }
+
     return (
-        <div className="page-content admin-page"> {/* Use wrapper + specific admin class */}
-            <header className="page-header">Admin - Create Plan</header>
+        <div className="page-content admin-page">
+            <header className="page-header">Admin - Create Reading Plan</header>
 
             {error && <p className="error admin-error">{error}</p>}
             {successMessage && <p className="success-message">{successMessage}</p>}
@@ -126,14 +135,17 @@ function AdminPage() {
                 )}
                 {!isLoadingPlans && existingPlans.length > 0 && (
                     <ul>
-                        {existingPlans.map((plan) => (
-                            <li key={plan.id}>
-                                <strong>{plan.topic}</strong> ({plan.duration_days} days)
-                                <br/>
-                                <small>Created: {new Date(plan.created_at).toLocaleString()}</small>
-                                {/* Optional: Add button to view details or delete */}
-                            </li>
-                        ))}
+                        {existingPlans
+                            // Sort plans by created_at date, newest first
+                            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                            .map((plan) => (
+                                <li key={plan.id}>
+                                    <strong>{plan.topic}</strong> ({plan.duration_days} days)
+                                    <br/>
+                                    <small>Created: {new Date(plan.created_at).toLocaleString()}</small>
+                                    {/* TODO: Add more plan management features - activate, delete? */}
+                                </li>
+                            ))}
                     </ul>
                 )}
             </div>

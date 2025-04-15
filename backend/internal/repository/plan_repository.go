@@ -1,118 +1,162 @@
 package repository
 
 import (
+	"bibleapp/backend/internal/domain"
 	"context"
 	"errors"
-	"sort"
-	"sync"
+	"log"
 	"time"
 
-	"bibleapp/backend/internal/domain" // Adjust import path if needed
-	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var (
-	ErrPlanNotFound  = errors.New("reading plan not found")
-	ErrNoActivePlan  = errors.New("no active reading plan found")
-	ErrDayOutOfRange = errors.New("day number is out of range for the plan duration")
-)
-
-// PlanRepository defines the interface for storing and retrieving reading plans.
+// PlanRepository defines the interface for plan data storage operations.
 type PlanRepository interface {
-	SavePlan(ctx context.Context, plan *domain.ReadingPlan) error
-	GetPlanByID(ctx context.Context, id uuid.UUID) (domain.ReadingPlan, error)
-	GetLatestPlan(ctx context.Context) (domain.ReadingPlan, error)
-	ListAllPlans(ctx context.Context) ([]domain.ReadingPlan, error)
+	Save(ctx context.Context, plan *domain.Plan) error
+	FindByID(ctx context.Context, id string) (*domain.Plan, error)
+	FindByUser(ctx context.Context, userID string) ([]*domain.Plan, error)
+	// Add other methods like FindAll, Delete as needed
 }
 
-// inMemoryPlanRepository implements PlanRepository using a map.
-// NOTE: Data is lost on application restart.
-type inMemoryPlanRepository struct {
-	mu    sync.RWMutex
-	plans map[uuid.UUID]domain.ReadingPlan
-	// Store IDs ordered by creation time to easily find the latest
-	orderedIDs []uuid.UUID
+// MongoPlanRepository implements PlanRepository using MongoDB.
+type MongoPlanRepository struct {
+	collection *mongo.Collection
 }
 
-// NewInMemoryPlanRepository creates a new in-memory repository.
-func NewInMemoryPlanRepository() PlanRepository {
-	return &inMemoryPlanRepository{
-		plans:      make(map[uuid.UUID]domain.ReadingPlan),
-		orderedIDs: make([]uuid.UUID, 0),
+// NewMongoPlanRepository creates a new instance of MongoPlanRepository.
+func NewMongoPlanRepository(db *mongo.Database) *MongoPlanRepository {
+	collection := db.Collection("plans")
+
+	// Consider creating indexes for common query fields, e.g., user_id
+	indexModel := mongo.IndexModel{
+		Keys: bson.D{{Key: "user_id", Value: 1}}, // Index on user_id
+		Options: options.Index().SetUnique(false), // user_id is likely not unique per plan
 	}
+	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
+	if err != nil {
+		log.Printf("WARN: Could not create 'user_id' index on plans collection: %v", err)
+	}
+
+	return &MongoPlanRepository{collection: collection}
 }
 
-func (r *inMemoryPlanRepository) SavePlan(ctx context.Context, plan *domain.ReadingPlan) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// Save inserts or updates a plan in the database.
+// It assumes plan.ID is empty for new plans and uses it for updates otherwise.
+func (r *MongoPlanRepository) Save(ctx context.Context, plan *domain.Plan) error {
+	now := time.Now()
+	plan.UpdatedAt = now
 
-	if plan.ID == uuid.Nil {
-		plan.ID = uuid.New() // Assign ID if not present
+	if plan.ID == "" { // New plan, insert
+		plan.CreatedAt = now
+		// Generate a new ObjectID for _id if it's not set (it shouldn't be for insert)
+		// The driver handles this if we pass the struct directly, *but* we need the ID back.
+		// Best practice is often to let the driver handle _id generation.
+		
+		// Clear potential empty string ID before insert if needed, though driver might handle it
+		// if plan.ID == "" { ... }
+
+		// We need to marshal without the ID field if we want mongo to generate it, 
+		// or generate it ourselves. Let's generate it.
+		objID := primitive.NewObjectID()
+		plan.ID = objID.Hex() // Set the ID in the struct *before* inserting
+
+		_, err := r.collection.InsertOne(ctx, plan) 
+		if err != nil {
+			log.Printf("ERROR: Failed to insert plan for user %s: %v", plan.UserID, err)
+			// Reset ID if insert failed? Depends on desired behavior.
+			// plan.ID = ""
+			return err
+		}
+		log.Printf("INFO: Inserted new plan with ID: %s for user: %s", plan.ID, plan.UserID)
+	} else { // Existing plan, update
+		objID, err := primitive.ObjectIDFromHex(plan.ID)
+		if err != nil {
+			log.Printf("ERROR: Invalid plan ID format for update: %s", plan.ID)
+			return errors.New("invalid plan ID format")
+		}
+		filter := bson.M{"_id": objID}
+
+		// Use bson.M or bson.D for updates to avoid replacing the whole document unintentionally
+		// $set is generally safer
+		update := bson.M{
+			"$set": bson.M{
+				"user_id":     plan.UserID,
+				"title":       plan.Title,
+				"description": plan.Description,
+				"duration":    plan.Duration,
+				"verses":      plan.Verses,
+				"status":      plan.Status,
+				"updated_at":  plan.UpdatedAt, // Update the updated_at timestamp
+			},
+			"$setOnInsert": bson.M{
+				"created_at": plan.CreatedAt, // Keep original created_at if upsert happens (though we separate insert/update logic here)
+			},
+		}
+
+		// Or update the whole document if the structure is stable:
+		// update := bson.M{"\$set": plan}
+
+		// Use UpdateOne instead of ReplaceOne unless you intend to replace the whole doc
+		result, err := r.collection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			log.Printf("ERROR: Failed to update plan %s: %v", plan.ID, err)
+			return err
+		}
+		if result.MatchedCount == 0 {
+			log.Printf("WARN: Plan with ID %s not found for update", plan.ID)
+			return mongo.ErrNoDocuments // Return specific error
+		}
+		log.Printf("INFO: Updated plan with ID: %s", plan.ID)
 	}
-	if plan.CreatedAt.IsZero() {
-		plan.CreatedAt = time.Now().UTC()
-	}
-
-	// Ensure DailyVerses are sorted by DayNumber (LLM might not guarantee order)
-	sort.SliceStable(plan.DailyVerses, func(i, j int) bool {
-		return plan.DailyVerses[i].DayNumber < plan.DailyVerses[j].DayNumber
-	})
-
-	_, exists := r.plans[plan.ID]
-	r.plans[plan.ID] = *plan
-
-	// Add to ordered list only if it's a new plan
-	if !exists {
-		r.orderedIDs = append(r.orderedIDs, plan.ID)
-	} else {
-		// If updating, ensure CreatedAt doesn't change unnecessarily affecting "latest"
-		// For simplicity here, we just overwrite. A real DB handles this better.
-		// If needed, re-sort orderedIDs by CreatedAt if updates could change order.
-	}
-
 	return nil
 }
 
-func (r *inMemoryPlanRepository) GetPlanByID(ctx context.Context, id uuid.UUID) (domain.ReadingPlan, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	plan, found := r.plans[id]
-	if !found {
-		return domain.ReadingPlan{}, ErrPlanNotFound
+// FindByID retrieves a plan by its MongoDB ObjectID string.
+func (r *MongoPlanRepository) FindByID(ctx context.Context, id string) (*domain.Plan, error) {
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Printf("ERROR: Invalid plan ID format for find: %s", id)
+		return nil, errors.New("invalid plan ID format")
 	}
-	return plan, nil
-}
-
-// GetLatestPlan returns the most recently created plan.
-func (r *inMemoryPlanRepository) GetLatestPlan(ctx context.Context) (domain.ReadingPlan, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	if len(r.orderedIDs) == 0 {
-		return domain.ReadingPlan{}, ErrNoActivePlan
-	}
-
-	latestID := r.orderedIDs[len(r.orderedIDs)-1]
-	plan, found := r.plans[latestID]
-	if !found {
-		// This indicates an internal inconsistency (ID in list but not in map)
-		return domain.ReadingPlan{}, errors.New("internal inconsistency: latest plan ID not found in map")
-	}
-	return plan, nil
-}
-
-func (r *inMemoryPlanRepository) ListAllPlans(ctx context.Context) ([]domain.ReadingPlan, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	list := make([]domain.ReadingPlan, 0, len(r.plans))
-	// Return in reverse chronological order (newest first)
-	for i := len(r.orderedIDs) - 1; i >= 0; i-- {
-		id := r.orderedIDs[i]
-		if plan, ok := r.plans[id]; ok {
-			list = append(list, plan)
+	filter := bson.M{"_id": objID}
+	var plan domain.Plan
+	err = r.collection.FindOne(ctx, filter).Decode(&plan)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil // Standard practice: return nil, nil for not found
 		}
+		log.Printf("ERROR: Failed to find plan %s: %v", id, err)
+		return nil, err
 	}
-	return list, nil
+	return &plan, nil
+}
+
+// FindByUser retrieves all plans associated with a specific user ID.
+func (r *MongoPlanRepository) FindByUser(ctx context.Context, userID string) ([]*domain.Plan, error) {
+	filter := bson.M{"user_id": userID}
+	// Optionally add sorting, e.g., by creation date descending
+	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}})
+
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		log.Printf("ERROR: Failed to execute find query for user %s plans: %v", userID, err)
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var plans []*domain.Plan
+	if err = cursor.All(ctx, &plans); err != nil {
+		log.Printf("ERROR: Failed to decode plans for user %s: %v", userID, err)
+		return nil, err
+	}
+
+	// If no documents are found, cursor.All returns an empty slice and nil error
+	if plans == nil {
+		plans = []*domain.Plan{} // Ensure non-nil slice is returned
+	}
+
+	return plans, nil
 }

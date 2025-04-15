@@ -9,6 +9,8 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/google/uuid v1.6.0
 	github.com/spf13/viper v1.20.1
+	go.mongodb.org/mongo-driver v1.15.1 // Added for MongoDB
+	golang.org/x/oauth2 v0.21.0 // Added for OAuth2
 )
 
 require (
