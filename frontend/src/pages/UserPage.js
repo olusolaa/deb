@@ -176,8 +176,9 @@ function UserPage() {
                             type="submit"
                             className="send-button"
                             disabled={isChatLoading || !chatQuestion.trim()}
+                            title="Ask question"
                         >
-                            {isChatLoading ? '...' : 'Ask'}
+                            {isChatLoading ? '...' : '→'}
                         </button>
                     </form>
                 </div>
