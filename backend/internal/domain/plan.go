@@ -7,21 +7,23 @@ import (
 )
 
 type DailyVerse struct {
-	DayNumber   int    `json:"day"`                   // Day number within the plan (1-based)
-	Reference   string `json:"reference"`             // e.g., "John 3:16-18"
-	Text        string `json:"text"`                  // The actual verse text (fetched later)
-	Title       string `json:"title"`                 // Short title for the day's reading
-	Explanation string `json:"explanation,omitempty"` // Optional detailed explanation (fetched later)
+	DayNumber   int    `json:"day" bson:"day"`                                     // Day number within the plan (1-based)
+	Reference   string `json:"reference" bson:"reference"`                         // e.g., "John 3:16-18"
+	Text        string `json:"text" bson:"text"`                                   // The actual verse text (fetched later)
+	Title       string `json:"title" bson:"title"`                                 // Short title for the day's reading
+	Explanation string `json:"explanation,omitempty" bson:"explanation,omitempty"` // Optional explanation (fetched later)
 }
 
 type ReadingPlan struct {
-	ID             uuid.UUID    `json:"id"`
-	UserID         string       `json:"user_id,omitempty"` // Associated user ID
-	Topic          string       `json:"topic"`
-	DurationDays   int          `json:"duration_days"`
-	TargetAudience string       `json:"target_audience"` // Store the audience for context
-	CreatedAt      time.Time    `json:"created_at"`
-	DailyVerses    []DailyVerse `json:"daily_verses"` // Ordered list of verses for the plan
+	ID             uuid.UUID    `json:"id" bson:"_id"`
+	UserID         string       `json:"user_id,omitempty" bson:"user_id"` // Associated user ID
+	Topic          string       `json:"topic" bson:"topic"`
+	DurationDays   int          `json:"duration_days" bson:"duration_days"`
+	TargetAudience string       `json:"target_audience" bson:"target_audience"` // Store the audience for context
+	CreatedAt      time.Time    `json:"created_at" bson:"created_at"`
+	StartDate      time.Time    `json:"start_date" bson:"start_date"`     // Calendar start date for the plan
+	EndDate        time.Time    `json:"end_date" bson:"end_date"`         // Calendar end date for the plan
+	DailyVerses    []DailyVerse `json:"daily_verses" bson:"daily_verses"` // Ordered list of verses for the plan
 }
 
 // Helper to get verse for a specific day (1-based index)

@@ -374,7 +374,9 @@ type ChatRequest struct {
 }
 
 type ChatResponse struct {
-	Answer string `json:"answer"`
+	Answer     string `json:"answer"`
+	UsageToday int    `json:"usage_today,omitempty"`
+	DailyLimit int    `json:"daily_limit,omitempty"`
 }
 
 // HandleChat requires authentication
@@ -395,21 +397,30 @@ func (h *APIHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Pass user context (e.g., UserID) if the chat service needs it
-	// Currently, ChatService is stateless per request, but could be adapted.
-	// Example: answer, err := h.chatService.GetResponseForUser(r.Context(), userClaims.UserID, req.Verse, req.Question)
-	answer, err := h.chatService.GetResponse(r.Context(), req.Verse, req.Question)
+	// Pass user ID for rate limiting
+	answer, err := h.chatService.GetResponse(r.Context(), req.Verse, req.Question, userClaims.UserID)
 	if err != nil {
 		log.Printf("ERROR: Failed to get chat response for user %s: %v", userClaims.UserID, err)
 		if errors.Is(err, context.DeadlineExceeded) {
 			writeError(w, "Chatbot request timed out.", http.StatusGatewayTimeout)
+		} else if _, ok := err.(service.ErrRateLimitExceeded); ok {
+			// Special case for rate limiting with a friendly message
+			writeError(w, "⏰ Daily chat limit reached. Try again tomorrow! We're working on increasing limits soon.", http.StatusTooManyRequests)
 		} else {
 			writeError(w, "Chatbot couldn't answer right now.", http.StatusInternalServerError)
 		}
 		return
 	}
 
-	writeJSON(w, http.StatusOK, ChatResponse{Answer: answer})
+	// Get current usage stats to include in response
+	currentUsage, dailyLimit, _ := h.chatService.GetChatUsage(r.Context(), userClaims.UserID)
+
+	// Include usage information in the response
+	writeJSON(w, http.StatusOK, ChatResponse{
+		Answer:     answer,
+		UsageToday: currentUsage,
+		DailyLimit: dailyLimit,
+	})
 }
 
 // HandleResetChat requires authentication

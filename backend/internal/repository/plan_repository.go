@@ -34,11 +34,40 @@ type MongoPlanRepository struct {
 
 // FindByUser retrieves all plans associated with a specific user ID.
 func (r *MongoPlanRepository) FindByUser(ctx context.Context, userID string) ([]*domain.ReadingPlan, error) {
-	// Temporarily remove userID filtering to debug
-	filter := bson.M{}
-	// Log what we're doing for debugging
-	log.Printf("DEBUG: Fetching all plans regardless of userID for debugging purposes")
-	// Optionally add sorting, e.g., by creation date descending
+	// Filter by userID - using case-insensitive regex to handle potential case variations
+	// For "default" specifically, we'll use an exact match
+	var filter bson.M
+	if userID == "default" {
+		filter = bson.M{"user_id": "default"}
+		log.Printf("INFO: Fetching default plans with exact match")
+	} else {
+		filter = bson.M{"user_id": userID}
+		log.Printf("INFO: Fetching plans for userID: %s", userID)
+	}
+
+	// Count total matching documents for debugging
+	count, countErr := r.collection.CountDocuments(ctx, filter)
+	if countErr != nil {
+		log.Printf("WARN: Failed to count documents for user %s: %v", userID, countErr)
+	} else {
+		log.Printf("DEBUG: Found %d plan documents in database for user %s", count, userID)
+	}
+
+	// Debug - Show all plans in the collection
+	debugCursor, debugErr := r.collection.Find(ctx, bson.M{})
+	if debugErr == nil {
+		defer debugCursor.Close(ctx)
+		var allPlans []*domain.ReadingPlan
+		if debugCursor.All(ctx, &allPlans) == nil {
+			log.Printf("DEBUG: Total plans in database: %d", len(allPlans))
+			for i, plan := range allPlans {
+				log.Printf("DEBUG: Plan #%d - ID: %s, UserID: '%s', Topic: '%s'",
+					i+1, plan.ID, plan.UserID, plan.Topic)
+			}
+		}
+	}
+
+	// Sort by creation date descending (newest first)
 	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}})
 
 	cursor, err := r.collection.Find(ctx, filter, opts)
@@ -58,6 +87,9 @@ func (r *MongoPlanRepository) FindByUser(ctx context.Context, userID string) ([]
 	if plans == nil {
 		plans = []*domain.ReadingPlan{} // Ensure non-nil slice is returned
 	}
+
+	// Log result details
+	log.Printf("INFO: Found %d plans for user %s", len(plans), userID)
 
 	return plans, nil
 }
@@ -188,13 +220,14 @@ func (r *InMemoryPlanRepository) FindByID(ctx context.Context, id string) (*doma
 
 // FindByUser retrieves all plans associated with a specific user ID.
 func (r *InMemoryPlanRepository) FindByUser(ctx context.Context, userID string) ([]*domain.ReadingPlan, error) {
-	// In this simplified version, we'll return all plans regardless of userID
-	plans := make([]*domain.ReadingPlan, 0, len(r.plans))
+	// Filter plans by userID
+	plans := make([]*domain.ReadingPlan, 0)
 
 	for _, plan := range r.plans {
-		plans = append(plans, plan)
+		if plan.UserID == userID {
+			plans = append(plans, plan)
+		}
 	}
 
 	return plans, nil
-
 }

@@ -37,6 +37,8 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URL=http://localhost:8084/auth/google/callback
       - JWT_SECRET=${JWT_SECRET:-temporary-dev-jwt-secret-change-in-production}
+      - CHAT_RATE_LIMIT_ENABLED=${CHAT_RATE_LIMIT_ENABLED:-true}
+      - CHAT_RATE_LIMIT_PER_DAY=${CHAT_RATE_LIMIT_PER_DAY:-5}
     depends_on:
       - mongodb
     restart: unless-stopped

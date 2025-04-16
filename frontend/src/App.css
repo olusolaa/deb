@@ -125,13 +125,13 @@ main {
 /* Shared Page Styles */
 .page-content {
   background: linear-gradient(135deg, rgba(18, 18, 35, 0.9), rgba(28, 28, 45, 0.9)); /* Transparent dark gradient */
-  padding: 2.5rem 2rem;
+  padding: 1.5rem 2rem 2.5rem;
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  margin-top: 2rem;
+  margin-top: 0.5rem;
   color: #ffffff;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(72, 49, 212, 0.1);
@@ -164,11 +164,12 @@ main {
   font-size: 2.4rem;
   font-weight: 700;
   color: #ffffff; /* White text for contrast */
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
+  margin: 0 0 1.5rem 0;
+  padding: 0 0 0.75rem 0;
   position: relative;
   display: inline-block;
   z-index: 1;
+  overflow: visible;
 }
 
 .page-header::after {

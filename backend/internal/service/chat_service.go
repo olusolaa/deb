@@ -7,10 +7,18 @@ import (
 	"log"
 	"sync" // Import sync for mutex
 
+	"bibleapp/backend/internal/config"
 	"bibleapp/backend/internal/domain"
 	"bibleapp/backend/internal/llm"
-	// repository package might not be needed here unless resetting interacts with it
+	"bibleapp/backend/internal/repository"
 )
+
+// ErrRateLimitExceeded is returned when a user has exceeded their daily chat limit
+type ErrRateLimitExceeded struct{}
+
+func (e ErrRateLimitExceeded) Error() string {
+	return "rate limit exceeded"
+}
 
 // --- Conversation Store (In-Memory) ---
 // For simplicity, we'll use a single hardcoded key for the niece's conversation.
@@ -26,30 +34,50 @@ var (
 // --- Chat Service Interface Update ---
 type ChatService interface {
 	// GetResponse now implicitly uses stored history
-	GetResponse(ctx context.Context, verse domain.DailyVerse, question string) (string, error)
+	GetResponse(ctx context.Context, verse domain.DailyVerse, question string, userID string) (string, error)
 	// New method to reset history
 	ResetChatHistory(ctx context.Context) error
+	// Get current chat usage for a user
+	GetChatUsage(ctx context.Context, userID string) (int, int, error) // returns (current usage, limit, error)
 }
 
 // --- Chat Service Implementation Update ---
 type chatService struct {
-	llmClient llm.LLMClient
-	modelName string
-	// No need to store repo here unless needed for chat
+	llmClient       llm.LLMClient
+	modelName       string
+	verseService    VerseService // Added verse service for Bible verse lookups
+	chatUsageRepo   repository.ChatUsageRepository
+	rateLimitConfig *config.Config // Configuration for rate limiting
 }
 
-// NewChatService remains the same constructor
-func NewChatService(client llm.LLMClient, modelName string) ChatService {
+// NewChatService now includes all dependencies
+func NewChatService(client llm.LLMClient, modelName string, verseService VerseService,
+	chatUsageRepo repository.ChatUsageRepository, cfg *config.Config) ChatService {
 	return &chatService{
-		llmClient: client,
-		modelName: modelName,
+		llmClient:       client,
+		modelName:       modelName,
+		verseService:    verseService,
+		chatUsageRepo:   chatUsageRepo,
+		rateLimitConfig: cfg,
 	}
 }
 
-// GetResponse now manages history
-func (s *chatService) GetResponse(ctx context.Context, verse domain.DailyVerse, question string) (string, error) {
+// GetResponse now manages history and implements rate limiting
+func (s *chatService) GetResponse(ctx context.Context, verse domain.DailyVerse, question string, userID string) (string, error) {
 	if question == "" {
 		return "", errors.New("question cannot be empty")
+	}
+
+	// Check rate limits if enabled
+	if s.rateLimitConfig.ChatRateLimitEnabled && userID != "" {
+		currentUsage, err := s.chatUsageRepo.GetTodayUsage(ctx, userID)
+		if err != nil {
+			log.Printf("WARN: Failed to check chat rate limit: %v", err)
+			// Continue despite error to maintain service availability
+		} else if currentUsage >= s.rateLimitConfig.ChatRateLimitPerDay {
+			// User has exceeded their daily limit
+			return "", ErrRateLimitExceeded{}
+		}
 	}
 
 	// Lock for reading and potentially writing history
@@ -60,18 +88,15 @@ func (s *chatService) GetResponse(ctx context.Context, verse domain.DailyVerse, 
 	history, ok := conversationHistory[nieceConversationKey]
 	if !ok {
 		history = make([]llm.Message, 0)
-		// Initialize history with system prompt and verse context if needed
-		// For follow-ups, the verse context might already be in history.
-		// Let's add the verse context on the *first* message of a *new* conversation.
-		if verse.Text != "" && verse.Reference != "" {
-			// Add verse context as the *first* user message in a new chat
-			initialContext := fmt.Sprintf("Let's talk about the verse: %s\n\"%s\"\n\nMy first question is: %s",
-				verse.Reference, verse.Text, question)
+		// Initialize history with verse reference for a new conversation (without full text to save tokens)
+		if verse.Reference != "" {
+			// Add only the verse reference as context, not the full text
+			initialContext := fmt.Sprintf("Let's talk about Bible verse %s. The user can see the full text. My first question is: %s",
+				verse.Reference, question)
 			history = append(history, llm.Message{Role: "user", Content: initialContext})
-			// Log that we added initial context
-			log.Printf("INFO: Initializing chat history for key '%s' with verse context.", nieceConversationKey)
+			log.Printf("INFO: Initializing chat history for key '%s' with verse reference only (token optimized).", nieceConversationKey)
 		} else {
-			// If verse is empty, just add the question
+			// If verse reference is empty, just add the question
 			history = append(history, llm.Message{Role: "user", Content: question})
 		}
 	} else {
@@ -120,6 +145,17 @@ func (s *chatService) GetResponse(ctx context.Context, verse domain.DailyVerse, 
 	conversationHistory[nieceConversationKey] = history
 	log.Printf("INFO: Updated chat history for key '%s'. History length: %d messages.", nieceConversationKey, len(history))
 
+	// Increment usage counter for rate limiting if enabled and we have a user ID
+	if s.rateLimitConfig.ChatRateLimitEnabled && userID != "" {
+		newCount, err := s.chatUsageRepo.IncrementUsage(ctx, userID)
+		if err != nil {
+			log.Printf("WARN: Failed to increment chat usage counter: %v", err)
+		} else {
+			log.Printf("INFO: User %s has used %d/%d chat requests today",
+				userID, newCount, s.rateLimitConfig.ChatRateLimitPerDay)
+		}
+	}
+
 	// Return only the latest assistant response
 	return assistantResponse, nil
 }
@@ -137,4 +173,19 @@ func (s *chatService) ResetChatHistory(ctx context.Context) error {
 		log.Printf("INFO: Chat history reset requested, but no history found for key '%s'.", nieceConversationKey)
 	}
 	return nil // Indicate success even if no history existed
+}
+
+// GetChatUsage returns the current usage and limit for a user
+func (s *chatService) GetChatUsage(ctx context.Context, userID string) (int, int, error) {
+	if !s.rateLimitConfig.ChatRateLimitEnabled || userID == "" {
+		// Rate limiting is disabled or no user ID provided
+		return 0, s.rateLimitConfig.ChatRateLimitPerDay, nil
+	}
+
+	currentUsage, err := s.chatUsageRepo.GetTodayUsage(ctx, userID)
+	if err != nil {
+		return 0, s.rateLimitConfig.ChatRateLimitPerDay, err
+	}
+
+	return currentUsage, s.rateLimitConfig.ChatRateLimitPerDay, nil
 }

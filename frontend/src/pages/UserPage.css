@@ -1,5 +1,51 @@
 /* frontend/src/pages/UserPage.css */
 
+/* Container and responsive layout */
+.container-wrapper {
+  position: relative;
+  width: 100%;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  padding: 0 1rem;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.container-wrapper.interactive-mode {
+  min-height: 70vh;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+@media (max-width: 768px) {
+  .page-content {
+    padding: 0.25rem 1rem;
+  }
+  
+  .container-wrapper {
+    padding: 0 0.5rem;
+  }
+  
+  .container-wrapper.interactive-mode {
+    min-height: 80vh;
+  }
+  
+  .page-header {
+    font-size: 2rem;
+    margin: 0 0 1rem 0;
+  }
+}
+
+/* Verse container animations and transitions */
+.verse-container {
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 2;
+  transform-origin: top center;
+  position: relative;
+  overflow: hidden;
+  margin-top: 0;
+}
+
 /* Verse Container Styles */
 .verse-container {
   background: linear-gradient(125deg, #1e1e30, #2a1b48); /* Deep, dark gradient base */
@@ -9,10 +55,19 @@
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
   position: relative;
   overflow: hidden;
-  transition: all 0.4s ease;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   z-index: 1;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(114, 236, 255, 0.3);
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .verse-container {
+    padding: 1.5rem 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 20px;
+  }
 }
 
 .verse-container:hover {
@@ -80,6 +135,82 @@
   letter-spacing: 0.2px;
 }
 
+/* Verse pages container and pagination */
+.verse-pages-container {
+  position: relative;
+  min-height: 150px;
+}
+
+/* Page transition animations with pure CSS */
+.verse-text {
+  animation: pageEnter 0.5s ease-out forwards;
+}
+
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Add a different animation for each page to ensure it triggers when page changes */
+.page-animate-0, .page-animate-1, .page-animate-2, .page-animate-3, .page-animate-4, .page-animate-5 {
+  animation: pageEnter 0.5s ease-out forwards;
+}
+
+/* Pagination controls */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+  gap: 1rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  width: fit-content;
+  margin: 1rem auto;
+}
+
+.page-button {
+  background: linear-gradient(135deg, #72ECFF, #4D6EFF);
+  color: white;
+  border: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.page-button:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(114, 236, 255, 0.3);
+}
+
+.page-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.page-indicator {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  min-width: 3rem;
+  text-align: center;
+}
+
 .verse-explanation {
   font-size: 1.1rem;
   color: rgba(255, 255, 255, 0.95);
@@ -124,7 +255,7 @@
   border: 1px solid rgba(114, 236, 255, 0.3);
   border-radius: 24px;
   overflow: hidden; /* Keep inner elements contained */
-  margin-top: 3rem;
+  margin-top: -40px; /* Negative margin to move it up */
   display: flex;
   flex-direction: column;
   max-height: 70vh; /* Limit height, adjust as needed */
@@ -133,6 +264,95 @@
   backdrop-filter: blur(10px);
   position: relative;
   z-index: 5;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .chatbot-container {
+    margin-top: 2rem;
+    border-radius: 20px;
+    max-height: 60vh;
+  }
+}
+
+/* Interactive Mode Animations */
+.verse-minimized {
+  transform: scale(0.95);
+  opacity: 0.95;
+  cursor: pointer;
+  z-index: 1;
+  margin-top: -20px;
+  padding-bottom: 0;
+  max-height: 100px;
+  overflow: hidden;
+}
+
+/* Hidden content for minimized view */
+.hidden-content {
+  display: none;
+}
+
+.verse-maximized {
+  transform: scale(1);
+  opacity: 1;
+  z-index: 10;
+  cursor: pointer;
+  margin-top: 0;
+}
+
+.chat-minimized {
+  transform: scale(0.9) translateY(calc(-100% + 80px));
+  opacity: 0.9;
+  cursor: pointer;
+  z-index: 1;
+  margin-top: -200px;
+}
+
+.chat-maximized {
+  transform: scale(1);
+  opacity: 1;
+  z-index: 10;
+  cursor: pointer;
+  margin-top: -60px;
+}
+
+@media (max-width: 768px) {
+  .verse-minimized {
+    transform: scale(0.9) translateY(calc(100% - 80px));
+  }
+  
+  .chat-minimized {
+    transform: scale(0.9) translateY(calc(-100% + 80px));
+  }
+}
+
+/* Expand/Minimize Indicators */
+.expand-indicator, .minimize-indicator {
+  position: absolute;
+  padding: 0.5rem 1rem;
+  background: rgba(114, 236, 255, 0.2);
+  border-radius: 20px;
+  color: #72ECFF;
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: pulse 2s infinite ease-in-out;
+  transition: all 0.3s ease;
+}
+
+.expand-indicator {
+  bottom: 1rem;
+  right: 1rem;
+}
+
+.minimize-indicator {
+  bottom: 1rem;
+  right: 1rem;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
 }
 
 @keyframes pulse-border {
@@ -222,6 +442,14 @@
   background-color: rgba(16, 16, 30, 0.7);
   scrollbar-width: thin;
   scrollbar-color: rgba(114, 236, 255, 0.3) transparent;
+}
+
+@media (max-width: 768px) {
+  .chat-history {
+    padding: 1rem;
+    gap: 1rem;
+    max-height: 40vh;
+  }
 }
 
 /* Custom scrollbar */
@@ -411,6 +639,12 @@
   z-index: 10;
   border-bottom-left-radius: 24px;
   border-bottom-right-radius: 24px;
+}
+
+@media (max-width: 768px) {
+  .chat-input-area {
+    padding: 1rem;
+  }
 }
 
 .chat-input {

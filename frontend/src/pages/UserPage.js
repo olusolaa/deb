@@ -21,8 +21,19 @@ function UserPage() {
     const [chatQuestion, setChatQuestion] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
     const [isChatLoading, setIsChatLoading] = useState(false);
-
+    
+    // State for pagination and animations
+    const [currentPage, setCurrentPage] = useState(0);
+    const [chatIsActive, setChatIsActive] = useState(false);
+    const [hasInteracted, setHasInteracted] = useState(false);
+    const [versePages, setVersePages] = useState([]);
+    const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    
+    // Refs for animation and scrolling
     const chatEndRef = useRef(null);
+    const verseContainerRef = useRef(null);
+    const chatContainerRef = useRef(null);
 
     const scrollToBottom = () => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -31,6 +42,60 @@ function UserPage() {
     useEffect(() => {
         scrollToBottom();
     }, [chatHistory]);
+    
+    // Handle window resize events for responsiveness
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowHeight(window.innerHeight);
+            setWindowWidth(window.innerWidth);
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+    
+    // Split verse content into pages when it changes
+    useEffect(() => {
+        if (dailyVerse && dailyVerse.text) {
+            // Roughly split content into pages if it's long enough
+            const text = dailyVerse.text;
+            const avgCharsPerPage = windowWidth < 768 ? 300 : 600; // Adjust based on screen size
+            
+            if (text.length <= avgCharsPerPage) {
+                setVersePages([text]);
+            } else {
+                // Find reasonable break points (periods followed by space)
+                const pages = [];
+                let startIdx = 0;
+                let currentPageLength = 0;
+                let lastBreakIdx = 0;
+                
+                for (let i = 0; i < text.length; i++) {
+                    currentPageLength++;
+                    
+                    // Consider a period followed by space as a good break point
+                    if (text[i] === '.' && (i + 1 < text.length && text[i + 1] === ' ')) {
+                        lastBreakIdx = i + 1;
+                    }
+                    
+                    if (currentPageLength >= avgCharsPerPage && lastBreakIdx > startIdx) {
+                        pages.push(text.substring(startIdx, lastBreakIdx));
+                        startIdx = lastBreakIdx;
+                        currentPageLength = i - lastBreakIdx;
+                    }
+                }
+                
+                // Add the last page
+                if (startIdx < text.length) {
+                    pages.push(text.substring(startIdx));
+                }
+                
+                setVersePages(pages);
+            }
+            
+            setCurrentPage(0);
+        }
+    }, [dailyVerse, windowWidth]);
 
     // Fetch today's verse using apiClient
     const fetchVerse = useCallback(async () => {
@@ -75,6 +140,12 @@ function UserPage() {
         const question = chatQuestion.trim();
         if (!question || !dailyVerse || isChatLoading) return;
 
+        // Mark that user has interacted with chat
+        if (!hasInteracted) {
+            setHasInteracted(true);
+            setTimeout(() => setChatIsActive(true), 300); // Delay to allow animation to complete
+        }
+
         addMessageToHistory(MSG_TYPE.USER, question);
         setChatQuestion('');
         setIsChatLoading(true);
@@ -92,6 +163,26 @@ function UserPage() {
             addMessageToHistory(MSG_TYPE.ERROR, `Oops! Chatbot trouble: ${errorMsg}`);
         } finally {
             setIsChatLoading(false);
+        }
+    };
+    
+    // Handle toggling between chat and verse views after first interaction
+    const toggleView = useCallback(() => {
+        if (hasInteracted) {
+            setChatIsActive(prevState => !prevState);
+        }
+    }, [hasInteracted]);
+    
+    // Navigate through verse pages
+    const nextPage = () => {
+        if (currentPage < versePages.length - 1) {
+            setCurrentPage(prev => prev + 1);
+        }
+    };
+    
+    const prevPage = () => {
+        if (currentPage > 0) {
+            setCurrentPage(prev => prev - 1);
         }
     };
 
@@ -114,75 +205,124 @@ function UserPage() {
     };
 
     return (
-        <div className="page-content">
+        <div className="page-content" style={{ minHeight: `${windowHeight - 60}px` }}>
             <header className="page-header">Today's Inspiration</header>
 
-            {/* Verse Display Area */}
-            <div className="verse-container">
-                {isLoadingVerse && <p className="loading">Loading today's reading...</p>}
-                {verseError && <p className="error">{verseError}</p>}
-                {dailyVerse && !isLoadingVerse && !verseError && (
-                    <>
-                        <h2 className="verse-reference">{dailyVerse.reference}</h2>
-                        {dailyVerse.title && (
-                            <h3 className="verse-title">{dailyVerse.title}</h3>
+            {/* Two main containers that will overlay each other after first interaction */}
+            <div className={`container-wrapper ${hasInteracted ? 'interactive-mode' : ''}`}>
+                {/* Verse Display Area */}
+                <div 
+                    ref={verseContainerRef}
+                    className={`verse-container ${hasInteracted ? (chatIsActive ? 'verse-minimized' : 'verse-maximized') : ''}`}
+                    onClick={hasInteracted ? toggleView : undefined}
+                >
+                    {isLoadingVerse && <p className="loading">Loading today's reading...</p>}
+                    {verseError && <p className="error">{verseError}</p>}
+                    {dailyVerse && !isLoadingVerse && !verseError && (
+                        <>
+                            <h2 className="verse-reference">{dailyVerse.reference}</h2>
+                            {dailyVerse.title && (
+                                <h3 className="verse-title">{dailyVerse.title}</h3>
+                            )}
+                            
+                            {/* Paginated verse text with animation - hide when minimized */}
+                            <div className={`verse-pages-container ${hasInteracted && chatIsActive ? 'hidden-content' : ''}`}>
+                                <p className={`verse-text page-animate-${currentPage}`} key={currentPage}>
+                                    "{versePages[currentPage]}"
+                                </p>
+                                
+                                {/* Pagination controls - only show if multiple pages */}
+                                {versePages.length > 1 && (
+                                    <div className="pagination-controls">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); prevPage(); }}
+                                            className={`page-button prev ${currentPage === 0 ? 'disabled' : ''}`}
+                                            disabled={currentPage === 0}
+                                        >
+                                            ◀
+                                        </button>
+                                        <span className="page-indicator">{currentPage + 1}/{versePages.length}</span>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); nextPage(); }}
+                                            className={`page-button next ${currentPage === versePages.length - 1 ? 'disabled' : ''}`}
+                                            disabled={currentPage === versePages.length - 1}
+                                        >
+                                            ▶
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {dailyVerse.explanation && (
+                                <p className="verse-explanation">
+                                    <strong>Quick thought:</strong> {dailyVerse.explanation}
+                                </p>
+                            )}
+                            
+                            {/* Indicator to show it's clickable after first interaction */}
+                            {hasInteracted && !chatIsActive && (
+                                <div className="expand-indicator">Tap to expand ↗</div>
+                            )}
+                        </>
+                    )}
+                </div>
+
+                {/* Chatbot Section - Show only if verse loaded and no auth error */}
+                {dailyVerse && !verseError && (
+                    <div 
+                        ref={chatContainerRef}
+                        className={`chatbot-container ${hasInteracted ? (chatIsActive ? 'chat-maximized' : 'chat-minimized') : ''}`}
+                        onClick={hasInteracted ? toggleView : undefined}
+                    >
+                        <div className="chat-header">
+                            <h3>Chat with me!</h3>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleResetChat(); }}
+                                className="reset-button"
+                                disabled={isChatLoading}
+                                title="Start a new conversation"
+                            >
+                                Reset Chat
+                            </button>
+                        </div>
+
+                        <div className="chat-history">
+                            {chatHistory.map((msg, index) => (
+                                <div key={index} className={`chat-message ${msg.role}`}>
+                                    <p>{msg.content}</p>
+                                </div>
+                            ))}
+                            <div ref={chatEndRef} />
+                        </div>
+
+                        {isChatLoading && <p className="chat-loading">Thinking...</p>}
+
+                        <form onSubmit={handleChatSubmit} className="chat-input-area" onClick={(e) => e.stopPropagation()}>
+                            <input
+                                type="text"
+                                className="chat-input"
+                                value={chatQuestion}
+                                onChange={(e) => setChatQuestion(e.target.value)}
+                                placeholder="Ask me anything about this verse..."
+                                disabled={isChatLoading}
+                            />
+                            <button
+                                type="submit"
+                                className="send-button"
+                                disabled={isChatLoading || !chatQuestion.trim()}
+                                title="Send message"
+                            >
+                                {isChatLoading ? '...' : '▶'}
+                            </button>
+                        </form>
+                        
+                        {/* Indicator to show it's clickable after first interaction */}
+                        {hasInteracted && chatIsActive && (
+                            <div className="minimize-indicator">Tap to minimize ↙</div>
                         )}
-                        <p className="verse-text">"{dailyVerse.text}"</p>
-                        {dailyVerse.explanation && (
-                            <p className="verse-explanation">
-                                <strong>Quick thought:</strong> {dailyVerse.explanation}
-                            </p>
-                        )}
-                    </>
+                    </div>
                 )}
             </div>
-
-            {/* Chatbot Section - Show only if verse loaded and no auth error */}
-            {dailyVerse && !verseError && (
-                <div className="chatbot-container">
-                    <div className="chat-header">
-                        <h3>Chat with me!</h3>
-                        <button
-                            onClick={handleResetChat}
-                            className="reset-button"
-                            disabled={isChatLoading}
-                            title="Start a new conversation"
-                        >
-                            Reset Chat
-                        </button>
-                    </div>
-
-                    <div className="chat-history">
-                        {chatHistory.map((msg, index) => (
-                            <div key={index} className={`chat-message ${msg.role}`}>
-                                <p>{msg.content}</p>
-                            </div>
-                        ))}
-                        <div ref={chatEndRef} />
-                    </div>
-
-                    {isChatLoading && <p className="chat-loading">Thinking...</p>}
-
-                    <form onSubmit={handleChatSubmit} className="chat-input-area">
-                        <input
-                            type="text"
-                            className="chat-input"
-                            value={chatQuestion}
-                            onChange={(e) => setChatQuestion(e.target.value)}
-                            placeholder="Ask me anything about this verse..."
-                            disabled={isChatLoading}
-                        />
-                        <button
-                            type="submit"
-                            className="send-button"
-                            disabled={isChatLoading || !chatQuestion.trim()}
-                            title="Send message"
-                        >
-                            {isChatLoading ? '...' : '▶'}
-                        </button>
-                    </form>
-                </div>
-            )}
         </div>
     );
 }
