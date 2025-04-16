@@ -1,65 +1,220 @@
-/* frontend/src/pages/LoginPage.css */
-
+/* Login Page Styles */
 .login-container {
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 200px); /* Adjust based on nav/footer height */
-  padding: 2rem;
+  justify-content: center;
+  padding: var(--spacing-4);
+  background: var(--gradient-secondary);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0) 45%),
+  radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0) 50%),
+  radial-gradient(circle at 50% 90%, rgba(250, 204, 21, 0.05) 0%, rgba(250, 204, 21, 0) 45%);
+  z-index: 0;
 }
 
 .login-box {
-  background-color: #ffffff;
-  padding: 2.5rem 3rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  max-width: 400px;
   width: 100%;
+  max-width: 450px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-2xl);
+  box-shadow: var(--shadow-2xl);
+  padding: var(--spacing-8);
+  position: relative;
+  z-index: 1;
+  animation: slideUp var(--transition-slow) forwards;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
 }
 
-.login-box h1 {
-  color: #343a40;
-  margin-bottom: 0.5rem;
-  font-size: 2rem;
-  font-weight: 600;
+.login-box::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background: var(--gradient-primary);
 }
 
-.login-box p {
-  color: #6c757d;
-  margin-bottom: 2rem;
+.login-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-6);
+}
+
+.login-logo svg {
+  width: 48px;
+  height: 48px;
+  color: var(--color-primary-600);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: var(--spacing-8);
+}
+
+.login-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.login-subtitle {
+  font-size: var(--font-size-lg);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.login-form {
+  margin-bottom: var(--spacing-6);
 }
 
 .login-button {
-  background-color: #4285F4; /* Google Blue */
-  color: white;
-  border: none;
-  padding: 0.8rem 1.5rem;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-  width: 100%; /* Make button full width */
-  display: inline-flex;
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  font-size: var(--font-size-lg);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem; /* Space between icon and text if you add one */
+  gap: var(--spacing-3);
+  border-radius: var(--border-radius-lg);
+  transition: all var(--transition-normal);
+  background: white;
+  color: var(--color-secondary-800);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  font-weight: var(--font-weight-medium);
 }
 
 .login-button:hover {
-  background-color: #357ae8;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
-.login-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
+.login-button:active {
+  transform: translateY(0);
 }
 
-.login-container.loading {
-  /* Styles for loading state if needed, though button handles it */
-  color: #6c757d;
+.login-button svg {
+  width: 24px;
+  height: 24px;
 }
 
-/* Error message styling is handled by global App.css */
+.login-button.google svg {
+  color: #4285F4;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin: var(--spacing-6) 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.login-divider::before {
+  margin-right: var(--spacing-4);
+}
+
+.login-divider::after {
+  margin-left: var(--spacing-4);
+}
+
+.login-footer {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin-top: var(--spacing-6);
+}
+
+.login-footer a {
+  color: var(--text-accent);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+  transition: color var(--transition-normal);
+}
+
+.login-footer a:hover {
+  text-decoration: underline;
+}
+
+.login-error {
+  margin-bottom: var(--spacing-4);
+}
+
+.login-container.loading .login-box {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.login-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8);
+}
+
+.login-loading-text {
+  margin-top: var(--spacing-4);
+  color: var(--text-secondary);
+  font-size: var(--font-size-lg);
+}
+
+/* Bible decoration */
+.bible-decoration {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  opacity: 0.05;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bible-decoration.top-left {
+  top: -50px;
+  left: -50px;
+  transform: rotate(-15deg);
+}
+
+.bible-decoration.bottom-right {
+  bottom: -50px;
+  right: -50px;
+  transform: rotate(15deg);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .login-box {
+    padding: var(--spacing-6) var(--spacing-4);
+  }
+
+  .login-title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .login-subtitle {
+    font-size: var(--font-size-base);
+  }
+}

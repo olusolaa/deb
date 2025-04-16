@@ -1,0 +1,153 @@
+/* Verse Highlighter Styles */
+.verse-highlighter {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.highlighted-text {
+    position: relative;
+    cursor: text;
+    user-select: text;
+    line-height: 1.8;
+}
+
+/* Highlight colors */
+.highlight {
+    padding: 2px 0;
+    border-radius: 2px;
+}
+
+.highlight-yellow {
+    background-color: rgba(255, 235, 59, 0.4);
+    box-shadow: 0 0 0 2px rgba(255, 235, 59, 0.2);
+}
+
+.highlight-green {
+    background-color: rgba(76, 175, 80, 0.3);
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.15);
+}
+
+.highlight-blue {
+    background-color: rgba(33, 150, 243, 0.3);
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.15);
+}
+
+/* Tooltip for highlighting */
+.highlight-tooltip {
+    position: fixed;
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    transform: translateX(-50%);
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.highlight-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    padding: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.highlight-btn:hover {
+    transform: scale(1.15);
+}
+
+.highlight-yellow {
+    background-color: #ffeb3b;
+}
+
+.highlight-green {
+    background-color: #4caf50;
+}
+
+.highlight-blue {
+    background-color: #2196f3;
+}
+
+.highlight-cancel {
+    background-color: #f44336;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Highlights list */
+.highlights-list {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border-left: 3px solid #4e7cff;
+}
+
+.highlights-list h4 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+    color: #4e7cff;
+}
+
+.highlights-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.highlight-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.highlight-text {
+    font-style: italic;
+}
+
+.remove-highlight {
+    background: none;
+    border: none;
+    color: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    transition: all 0.2s ease;
+}
+
+.remove-highlight:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.8);
+}

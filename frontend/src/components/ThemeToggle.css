@@ -1,0 +1,139 @@
+/* Theme Toggle Styles */
+.theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    width: 56px;
+    height: 28px;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right, #f5f7fa, #c3cfe2);
+    border-radius: 14px;
+    transition: all 0.3s ease;
+}
+
+.theme-toggle.dark .toggle-track {
+    background: linear-gradient(to right, #2c3e50, #4c669f);
+}
+
+.toggle-indicator {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    background-color: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle.dark .toggle-indicator {
+    left: calc(100% - 26px);
+    background-color: #192734;
+}
+
+.toggle-icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* Dark theme variables */
+:root {
+    --bg-primary: #f5f7fa;
+    --bg-secondary: #ffffff;
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --accent-primary: #4e7cff;
+    --accent-secondary: #5c8ffc;
+    --border-color: rgba(220, 230, 255, 0.7);
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --card-bg: linear-gradient(145deg, #ffffff, #f0f5ff);
+    --highlight-bg: rgba(78, 124, 255, 0.1);
+}
+
+.dark-theme {
+    --bg-primary: #1a202c;
+    --bg-secondary: #2d3748;
+    --text-primary: #f7fafc;
+    --text-secondary: #e2e8f0;
+    --accent-primary: #63b3ed;
+    --accent-secondary: #4299e1;
+    --border-color: rgba(74, 85, 104, 0.7);
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --card-bg: linear-gradient(145deg, #2d3748, #1a202c);
+    --highlight-bg: rgba(99, 179, 237, 0.1);
+}
+
+/* Apply theme variables to elements */
+.dark-theme body {
+    background: linear-gradient(125deg, #0f172a, #1e293b);
+    color: var(--text-primary);
+}
+
+.dark-theme .verse-container,
+.dark-theme .chatbot-container {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    box-shadow: 0 15px 40px var(--shadow-color);
+}
+
+.dark-theme .verse-reference {
+    color: var(--text-primary);
+    background: var(--highlight-bg);
+    border-left-color: var(--accent-primary);
+}
+
+.dark-theme .verse-text {
+    color: var(--text-primary);
+    background: rgba(45, 55, 72, 0.5);
+}
+
+.dark-theme .verse-explanation {
+    color: var(--text-secondary);
+    background: rgba(45, 55, 72, 0.5);
+    border-left-color: var(--accent-primary);
+}
+
+.dark-theme .chat-history {
+    background: rgba(45, 55, 72, 0.5);
+}
+
+.dark-theme .chat-input {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.dark-theme .chat-message.assistant {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-left-color: var(--accent-primary);
+}
+
+.dark-theme .pagination-controls {
+    background: var(--highlight-bg);
+}
+
+.dark-theme .reset-button {
+    background-color: var(--bg-secondary);
+    color: var(--accent-primary);
+    border-color: var(--border-color);
+}
