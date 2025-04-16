@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import apiClient from '../api/axiosConfig'; // *** Use Axios Client ***
 import { useAuth } from '../context/AuthContext'; // Import useAuth
+import { Link } from 'react-router-dom';
 import '../App.css';
 import './UserPage.css';
 
@@ -13,7 +14,7 @@ const MSG_TYPE = {
 };
 
 function UserPage() {
-    const { user } = useAuth(); // Get user info if needed
+    const { user, logout } = useAuth(); // Get user info and logout function
     const [dailyVerse, setDailyVerse] = useState(null);
     const [isLoadingVerse, setIsLoadingVerse] = useState(true);
     const [verseError, setVerseError] = useState(null);
@@ -24,16 +25,12 @@ function UserPage() {
     
     // State for pagination and animations
     const [currentPage, setCurrentPage] = useState(0);
-    const [chatIsActive, setChatIsActive] = useState(false);
-    const [hasInteracted, setHasInteracted] = useState(false);
     const [versePages, setVersePages] = useState([]);
     const [windowHeight, setWindowHeight] = useState(window.innerHeight);
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     
-    // Refs for animation and scrolling
+    // Refs for scrolling
     const chatEndRef = useRef(null);
-    const verseContainerRef = useRef(null);
-    const chatContainerRef = useRef(null);
 
     const scrollToBottom = () => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -140,11 +137,7 @@ function UserPage() {
         const question = chatQuestion.trim();
         if (!question || !dailyVerse || isChatLoading) return;
 
-        // Mark that user has interacted with chat
-        if (!hasInteracted) {
-            setHasInteracted(true);
-            setTimeout(() => setChatIsActive(true), 300); // Delay to allow animation to complete
-        }
+        // We no longer need to mark chat interaction since both are always visible
 
         addMessageToHistory(MSG_TYPE.USER, question);
         setChatQuestion('');
@@ -166,12 +159,7 @@ function UserPage() {
         }
     };
     
-    // Handle toggling between chat and verse views after first interaction
-    const toggleView = useCallback(() => {
-        if (hasInteracted) {
-            setChatIsActive(prevState => !prevState);
-        }
-    }, [hasInteracted]);
+    // We no longer need the toggle view function as we're displaying both side-by-side
     
     // Navigate through verse pages
     const nextPage = () => {
@@ -204,29 +192,69 @@ function UserPage() {
         }
     };
 
-    return (
-        <div className="page-content" style={{ minHeight: `${windowHeight - 60}px` }}>
-            <header className="page-header">Today's Inspiration</header>
+    // No need to redeclare useAuth since we already have it at the top
 
-            {/* Two main containers that will overlay each other after first interaction */}
-            <div className={`container-wrapper ${hasInteracted ? 'interactive-mode' : ''}`}>
-                {/* Verse Display Area */}
-                <div 
-                    ref={verseContainerRef}
-                    className={`verse-container ${hasInteracted ? (chatIsActive ? 'verse-minimized' : 'verse-maximized') : ''}`}
-                    onClick={hasInteracted ? toggleView : undefined}
-                >
+    return (
+        <>
+            {/* Left Navigation with Icons - Now outside page-content */}
+            <div className="left-nav">
+                <div className="nav-icon-container active">
+                    <span className="nav-icon verse-icon">📘</span>
+                    <span className="nav-label">Today's Reading</span>
+                </div>
+                <Link to="/admin" className="nav-icon-container">
+                    <span className="nav-icon admin-icon">⚙️</span>
+                    <span className="nav-label">Admin</span>
+                </Link>
+                <div className="nav-icon-container">
+                    <span className="nav-icon message-icon">🔍</span>
+                    <span className="nav-label">Search</span>
+                </div>
+                <div className="nav-icon-container">
+                    <span className="nav-icon tools-icon">📝</span>
+                    <span className="nav-label">Notes</span>
+                </div>
+                <div className="nav-icon-container">
+                    <span className="nav-icon save-icon">🔖</span>
+                    <span className="nav-label">Bookmarks</span>
+                </div>
+                <div className="nav-icon-container">
+                    <span className="nav-icon share-icon">🔄</span>
+                    <span className="nav-label">Share</span>
+                </div>
+                <div className="nav-icon-container">
+                    <span className="nav-icon like-icon">❤️</span>
+                    <span className="nav-label">Favorites</span>
+                </div>
+                {user && (
+                    <div className="nav-icon-container logout-icon" onClick={logout}>
+                        <span className="nav-icon">🚪</span>
+                        <span className="nav-label">Logout</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="page-content" style={{ minHeight: `${windowHeight - 60}px` }}>
+                <div className="main-content-area">
+
+                {/* Main container wrapper */}
+                <div className="container-wrapper">
+                    {/* Verse Display Area - Now on the left */}
+                    <div className="verse-container">
+
                     {isLoadingVerse && <p className="loading">Loading today's reading...</p>}
                     {verseError && <p className="error">{verseError}</p>}
                     {dailyVerse && !isLoadingVerse && !verseError && (
                         <>
-                            <h2 className="verse-reference">{dailyVerse.reference}</h2>
-                            {dailyVerse.title && (
-                                <h3 className="verse-title">{dailyVerse.title}</h3>
-                            )}
+                            <div className="verse-header">
+                                <h2 className="verse-reference">{dailyVerse.reference}</h2>
+                                {dailyVerse.title && (
+                                    <h3 className="verse-title">{dailyVerse.title}</h3>
+                                )}
+                            </div>
                             
-                            {/* Paginated verse text with animation - hide when minimized */}
-                            <div className={`verse-pages-container ${hasInteracted && chatIsActive ? 'hidden-content' : ''}`}>
+                            {/* Paginated verse text with animation */}
+                            <div className="verse-pages-container">
                                 <p className={`verse-text page-animate-${currentPage}`} key={currentPage}>
                                     "{versePages[currentPage]}"
                                 </p>
@@ -259,71 +287,60 @@ function UserPage() {
                                 </p>
                             )}
                             
-                            {/* Indicator to show it's clickable after first interaction */}
-                            {hasInteracted && !chatIsActive && (
-                                <div className="expand-indicator">Tap to expand ↗</div>
-                            )}
+
                         </>
                     )}
-                </div>
-
-                {/* Chatbot Section - Show only if verse loaded and no auth error */}
-                {dailyVerse && !verseError && (
-                    <div 
-                        ref={chatContainerRef}
-                        className={`chatbot-container ${hasInteracted ? (chatIsActive ? 'chat-maximized' : 'chat-minimized') : ''}`}
-                        onClick={hasInteracted ? toggleView : undefined}
-                    >
-                        <div className="chat-header">
-                            <h3>Chat with me!</h3>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleResetChat(); }}
-                                className="reset-button"
-                                disabled={isChatLoading}
-                                title="Start a new conversation"
-                            >
-                                Reset Chat
-                            </button>
-                        </div>
-
-                        <div className="chat-history">
-                            {chatHistory.map((msg, index) => (
-                                <div key={index} className={`chat-message ${msg.role}`}>
-                                    <p>{msg.content}</p>
-                                </div>
-                            ))}
-                            <div ref={chatEndRef} />
-                        </div>
-
-                        {isChatLoading && <p className="chat-loading">Thinking...</p>}
-
-                        <form onSubmit={handleChatSubmit} className="chat-input-area" onClick={(e) => e.stopPropagation()}>
-                            <input
-                                type="text"
-                                className="chat-input"
-                                value={chatQuestion}
-                                onChange={(e) => setChatQuestion(e.target.value)}
-                                placeholder="Ask me anything about this verse..."
-                                disabled={isChatLoading}
-                            />
-                            <button
-                                type="submit"
-                                className="send-button"
-                                disabled={isChatLoading || !chatQuestion.trim()}
-                                title="Send message"
-                            >
-                                {isChatLoading ? '...' : '▶'}
-                            </button>
-                        </form>
-                        
-                        {/* Indicator to show it's clickable after first interaction */}
-                        {hasInteracted && chatIsActive && (
-                            <div className="minimize-indicator">Tap to minimize ↙</div>
-                        )}
                     </div>
-                )}
+
+                    {/* Chat Section - Now on the right */}
+                    {dailyVerse && !verseError && (
+                        <div className="chatbot-container">
+                            <div className="chat-actions">
+                                <button
+                                    onClick={(e) => { handleResetChat(); }}
+                                    className="reset-button"
+                                    disabled={isChatLoading}
+                                    title="Start a new conversation"
+                                >
+                                    <span className="reset-icon">🔄</span> New Conversation
+                                </button>
+                            </div>
+
+                            <div className="chat-history">
+                                {chatHistory.map((msg, index) => (
+                                    <div key={index} className={`chat-message ${msg.role}`}>
+                                        <p>{msg.content}</p>
+                                    </div>
+                                ))}
+                                <div ref={chatEndRef} />
+                            </div>
+
+                            {isChatLoading && <p className="chat-loading">Thinking...</p>}
+
+                            <form onSubmit={handleChatSubmit} className="chat-input-area">
+                                <input
+                                    type="text"
+                                    className="chat-input"
+                                    value={chatQuestion}
+                                    onChange={(e) => setChatQuestion(e.target.value)}
+                                    placeholder="Ask about this passage or seek deeper understanding..."
+                                    disabled={isChatLoading}
+                                />
+                                <button
+                                    type="submit"
+                                    className="send-button"
+                                    disabled={isChatLoading || !chatQuestion.trim()}
+                                    title="Send message"
+                                >
+                                    {isChatLoading ? '...' : '➤'}
+                                </button>
+                            </form>
+                        </div>
+                    )}
+                </div>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

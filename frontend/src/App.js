@@ -25,27 +25,7 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// Simple component for the Navbar
-function Navigation() {
-    const { user, logout, isLoading } = useAuth();
-
-    return (
-        <nav className="main-nav">
-            <ul>
-                {user && ( // Only show these links if logged in
-                    <>
-                        <li><Link to="/">Today's Verse</Link></li>
-                        {/* Consider adding role-based access for Admin later */}
-                        <li><Link to="/admin">Admin</Link></li>
-                    </>
-                )}
-            </ul>
-            {user && !isLoading && ( // Show logout button if logged in and not loading
-                <button onClick={logout} className="logout-button">Logout ({user.name || user.email})</button>
-            )}
-        </nav>
-    );
-}
+// Navigation moved to sidebar in UserPage component
 
 
 function App() {
@@ -62,8 +42,6 @@ function App() {
     return (
         // Router moved to index.js where AuthProvider is
         <div className="AppContainer">
-            <Navigation /> {/* Use the Navigation component */}
-
             <main>
                 <Routes>
                     {/* Public Login Route */}
