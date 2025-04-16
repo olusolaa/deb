@@ -30,9 +30,32 @@ function ProtectedRoute({ children }) {
     return children
 }
 
+// Page transition component
+function PageTransition({ children }) {
+    const [isVisible, setIsVisible] = useState(false)
+
+    useEffect(() => {
+        // Small delay to ensure the animation triggers
+        const timer = setTimeout(() => {
+            setIsVisible(true)
+        }, 50)
+
+        return () => clearTimeout(timer)
+    }, [])
+
+    return <div className={`page-transition ${isVisible ? "visible" : ""}`}>{children}</div>
+}
+
 function App() {
     const { isLoading } = useAuth()
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+    const [theme, setTheme] = useState(() => {
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem("theme")
+        return (
+            savedTheme || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+        )
+    })
 
     // Handle window resize
     useEffect(() => {
@@ -44,6 +67,16 @@ function App() {
         return () => window.removeEventListener("resize", handleResize)
     }, [])
 
+    // Apply theme class to body
+    useEffect(() => {
+        if (theme === "dark") {
+            document.body.classList.add("dark-theme")
+        } else {
+            document.body.classList.remove("dark-theme")
+        }
+        localStorage.setItem("theme", theme)
+    }, [theme])
+
     // Add a class to the body for mobile devices
     useEffect(() => {
         if (isMobile) {
@@ -53,19 +86,33 @@ function App() {
         }
     }, [isMobile])
 
+    // Theme toggle function
+    const toggleTheme = () => {
+        setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"))
+    }
+
     return (
         <div className={`AppContainer ${isMobile ? "mobile" : ""}`}>
             <main>
                 <Routes>
                     {/* Public Login Route */}
-                    <Route path="/login" element={<LoginPage />} />
+                    <Route
+                        path="/login"
+                        element={
+                            <PageTransition>
+                                <LoginPage />
+                            </PageTransition>
+                        }
+                    />
 
                     {/* Protected Routes */}
                     <Route
                         path="/"
                         element={
                             <ProtectedRoute>
-                                <UserPage />
+                                <PageTransition>
+                                    <UserPage toggleTheme={toggleTheme} theme={theme} />
+                                </PageTransition>
                             </ProtectedRoute>
                         }
                     />
@@ -73,7 +120,9 @@ function App() {
                         path="/admin"
                         element={
                             <ProtectedRoute>
-                                <AdminPage />
+                                <PageTransition>
+                                    <AdminPage toggleTheme={toggleTheme} theme={theme} />
+                                </PageTransition>
                             </ProtectedRoute>
                         }
                     />

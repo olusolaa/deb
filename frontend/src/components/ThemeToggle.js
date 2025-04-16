@@ -3,37 +3,36 @@
 import { useState, useEffect } from "react"
 import "./ThemeToggle.css"
 
-const ThemeToggle = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false)
+const ThemeToggle = ({ onToggle, currentTheme }) => {
+    const [isDarkMode, setIsDarkMode] = useState(currentTheme === "dark")
+    const [isAnimating, setIsAnimating] = useState(false)
 
     // Check for saved theme preference or system preference
     useEffect(() => {
-        const savedTheme = localStorage.getItem("theme")
-        if (savedTheme === "dark") {
-            setIsDarkMode(true)
-            document.documentElement.classList.add("dark-theme")
-        } else if (savedTheme === "light") {
-            setIsDarkMode(false)
-            document.documentElement.classList.remove("dark-theme")
-        } else {
-            // Check system preference
-            const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-            setIsDarkMode(prefersDark)
-            if (prefersDark) {
-                document.documentElement.classList.add("dark-theme")
-            }
-        }
-    }, [])
+        setIsDarkMode(currentTheme === "dark")
+    }, [currentTheme])
 
     const toggleTheme = () => {
+        // Prevent multiple rapid toggles
+        if (isAnimating) return
+
+        setIsAnimating(true)
         setIsDarkMode(!isDarkMode)
-        if (!isDarkMode) {
-            document.documentElement.classList.add("dark-theme")
-            localStorage.setItem("theme", "dark")
+
+        // Apply theme to document if no external handler
+        if (!onToggle) {
+            const newTheme = !isDarkMode ? "dark" : "light"
+            document.documentElement.classList.toggle("dark-theme", newTheme === "dark")
+            localStorage.setItem("theme", newTheme)
         } else {
-            document.documentElement.classList.remove("dark-theme")
-            localStorage.setItem("theme", "light")
+            // Call external handler if provided
+            onToggle(!isDarkMode ? "dark" : "light")
         }
+
+        // Reset animation lock after transition completes
+        setTimeout(() => {
+            setIsAnimating(false)
+        }, 300)
     }
 
     return (
@@ -45,10 +44,9 @@ const ThemeToggle = () => {
         >
             <div className="toggle-track">
                 <div className="toggle-indicator">
-                    <span className="toggle-icon">{isDarkMode ? "🌙" : "☀️"}</span>
+                    <span className="toggle-icon"></span>
                 </div>
             </div>
-            <span className="sr-only">{isDarkMode ? "Switch to light mode" : "Switch to dark mode"}</span>
         </button>
     )
 }

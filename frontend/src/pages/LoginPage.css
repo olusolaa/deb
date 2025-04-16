@@ -1,4 +1,4 @@
-/* LoginPage.css - Fully Responsive */
+/* LoginPage.css - Premium Design */
 
 .login-container {
   min-height: 100vh;
@@ -7,8 +7,8 @@
   align-items: center;
   position: relative;
   overflow: hidden;
-  background: var(--gradient-bg);
-  padding: var(--space-4);
+  background: var(--bg-primary);
+  padding: var(--spacing-4);
 }
 
 /* Background Animation */
@@ -27,10 +27,11 @@
   border-radius: 50%;
   filter: blur(60px);
   opacity: 0.4;
+  transition: all 3s ease-in-out;
 }
 
 .shape-1 {
-  background: rgba(var(--color-accent-primary-rgb), 0.3);
+  background: rgba(var(--color-primary-500), 0.3);
   width: 500px;
   height: 500px;
   top: -100px;
@@ -39,7 +40,7 @@
 }
 
 .shape-2 {
-  background: rgba(var(--color-accent-secondary-rgb), 0.2);
+  background: rgba(var(--color-accent-500), 0.2);
   width: 600px;
   height: 600px;
   bottom: -200px;
@@ -48,7 +49,7 @@
 }
 
 .shape-3 {
-  background: rgba(var(--color-accent-tertiary-rgb), 0.15);
+  background: rgba(var(--color-primary-700), 0.15);
   width: 300px;
   height: 300px;
   top: 50%;
@@ -101,7 +102,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-10);
+  gap: var(--spacing-10);
   max-width: 1200px;
   width: 100%;
   position: relative;
@@ -111,50 +112,70 @@
 @media (max-width: 1024px) {
   .login-content {
     flex-direction: column;
-    gap: var(--space-6);
+    gap: var(--spacing-6);
   }
 }
 
 /* Login Box */
 .login-box {
-  background: rgba(var(--color-bg-primary-rgb), 0.8);
-  backdrop-filter: blur(20px);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
+  background: var(--glass-background);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  border-radius: var(--border-radius-2xl);
+  padding: var(--spacing-6);
   width: 100%;
   max-width: 500px;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(var(--color-border-rgb), 0.1);
-  animation: fadeIn 0.6s ease-out;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--glass-border);
+  animation: scaleUp var(--transition-duration-500) var(--transition-timing-ease-out);
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes fadeIn {
+.dark-theme .login-box {
+  background: var(--glass-background-dark);
+  border: 1px solid var(--glass-border-dark);
+}
+
+/* Subtle glow effect */
+.login-box::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(var(--color-primary-500), 0.1) 0%, transparent 70%);
+  animation: rotate 15s linear infinite;
+  z-index: -1;
+}
+
+@keyframes rotate {
   from {
-    opacity: 0;
-    transform: translateY(20px);
+    transform: rotate(0deg);
   }
   to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: rotate(360deg);
   }
 }
 
 @media (max-width: 768px) {
   .login-box {
-    padding: var(--space-4);
+    padding: var(--spacing-4);
     max-width: 100%;
   }
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--spacing-6);
 }
 
 .app-logo {
   display: flex;
   justify-content: center;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--spacing-3);
+  position: relative;
 }
 
 .logo-icon {
@@ -163,25 +184,62 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+/* Glow effect behind logo */
+.app-logo::after {
+  content: "";
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(var(--color-primary-500), 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 3s infinite;
 }
 
 .app-title {
   font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin: 0 0 var(--space-2) 0;
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--spacing-2) 0;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
+  letter-spacing: var(--letter-spacing-tight);
+  position: relative;
+  display: inline-block;
+}
+
+/* Underline animation */
+.app-title::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--gradient-primary);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--transition-duration-500) var(--transition-timing-ease-out);
+}
+
+.login-box:hover .app-title::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 
 .app-tagline {
   font-size: 1.1rem;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   margin: 0;
+  animation: fadeIn var(--transition-duration-500) var(--transition-timing-ease-out) 0.3s both;
 }
 
 @media (max-width: 768px) {
@@ -216,13 +274,13 @@
 .login-error {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background-color: rgba(239, 68, 68, 0.1);
-  color: rgb(239, 68, 68);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-4);
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  background-color: rgba(var(--color-error-500), 0.1);
+  color: var(--color-error-700);
+  border: 1px solid rgba(var(--color-error-500), 0.2);
+  border-radius: var(--border-radius-lg);
+  margin-bottom: var(--spacing-4);
   animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
@@ -256,23 +314,59 @@
 .login-features {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-6);
 }
 
 .feature-item {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  background: rgba(var(--color-bg-secondary-rgb), 0.5);
-  border-radius: var(--radius-md);
-  transition: var(--transition-normal);
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  background: rgba(var(--color-secondary-100), 0.5);
+  border-radius: var(--border-radius-lg);
+  transition: all var(--transition-duration-300) var(--transition-timing-ease-out);
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.dark-theme .feature-item {
+  background: rgba(var(--color-secondary-800), 0.5);
 }
 
 .feature-item:hover {
   transform: translateX(5px);
-  background: rgba(var(--color-bg-secondary-rgb), 0.8);
+  background: rgba(var(--color-secondary-100), 0.8);
+  border-color: rgba(var(--color-primary-500), 0.2);
+}
+
+.dark-theme .feature-item:hover {
+  background: rgba(var(--color-secondary-800), 0.8);
+}
+
+/* Subtle shine effect on hover */
+.feature-item::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+          to right,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.3) 50%,
+          rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(30deg);
+  transition: transform var(--transition-duration-700) linear;
+  opacity: 0;
+}
+
+.feature-item:hover::after {
+  transform: rotate(30deg) translate(100%, 0);
+  opacity: 1;
 }
 
 .feature-icon {
@@ -282,21 +376,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--color-accent-primary-rgb), 0.1);
+  background: rgba(var(--color-primary-500), 0.1);
   border-radius: 50%;
   flex-shrink: 0;
+  transition: all var(--transition-duration-300) var(--transition-timing-ease-out);
+}
+
+.feature-item:hover .feature-icon {
+  transform: scale(1.1);
+  background: rgba(var(--color-primary-500), 0.2);
 }
 
 .feature-text h3 {
   font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 var(--space-1) 0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-1) 0;
+  transition: color var(--transition-duration-300) var(--transition-timing-ease);
+}
+
+.feature-item:hover .feature-text h3 {
+  color: var(--color-primary-600);
 }
 
 .feature-text p {
   font-size: 0.9rem;
-  color: var(--color-text-tertiary);
+  color: var(--text-tertiary);
   margin: 0;
 }
 
@@ -318,7 +423,7 @@
 
 @media (max-width: 480px) {
   .feature-item {
-    padding: var(--space-2);
+    padding: var(--spacing-2);
   }
 
   .feature-icon {
@@ -333,25 +438,51 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--spacing-2);
   width: 100%;
-  padding: var(--space-3);
+  padding: var(--spacing-3);
   background: var(--gradient-primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-lg);
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition: var(--transition-normal);
-  box-shadow: 0 4px 12px rgba(var(--color-accent-primary-rgb), 0.3);
-  margin-bottom: var(--space-4);
+  transition: all var(--transition-duration-300) var(--transition-timing-ease-out);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-500), 0.3);
+  margin-bottom: var(--spacing-4);
   min-height: 50px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Button shine effect */
+.login-button::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+          to right,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.3) 50%,
+          rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(30deg);
+  transition: transform var(--transition-duration-700) linear;
+  opacity: 0;
+}
+
+.login-button:hover::after {
+  transform: rotate(30deg) translate(100%, 0);
+  opacity: 1;
 }
 
 .login-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(var(--color-accent-primary-rgb), 0.4);
+  box-shadow: 0 6px 16px rgba(var(--color-primary-500), 0.4);
 }
 
 .login-button:disabled {
@@ -374,19 +505,39 @@
 /* Login Footer */
 .login-footer {
   font-size: 0.85rem;
-  color: var(--color-text-tertiary);
+  color: var(--text-tertiary);
   text-align: center;
   margin: 0;
+  animation: fadeIn var(--transition-duration-500) var(--transition-timing-ease-out) 0.5s both;
 }
 
 .login-footer a {
-  color: var(--color-accent-primary);
+  color: var(--color-primary-600);
   text-decoration: none;
-  transition: var(--transition-fast);
+  transition: color var(--transition-duration-150) var(--transition-timing-ease);
+  position: relative;
 }
 
 .login-footer a:hover {
-  text-decoration: underline;
+  color: var(--color-primary-500);
+}
+
+.login-footer a::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 1px;
+  bottom: -1px;
+  left: 0;
+  background-color: currentColor;
+  transform-origin: bottom right;
+  transition: transform var(--transition-duration-300) var(--transition-timing-ease-out);
+}
+
+.login-footer a:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
 }
 
 /* Testimonials */
@@ -396,21 +547,42 @@
 }
 
 .testimonial {
-  background: rgba(var(--color-bg-primary-rgb), 0.6);
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  border: 1px solid rgba(var(--color-border-rgb), 0.1);
-  box-shadow: var(--shadow-md);
-  animation: fadeIn 0.6s ease-out 0.3s both;
+  background: var(--glass-background);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  border-radius: var(--border-radius-2xl);
+  padding: var(--spacing-6);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
+  animation: slideLeft var(--transition-duration-500) var(--transition-timing-ease-out) 0.3s both;
+  position: relative;
+  overflow: hidden;
+}
+
+.dark-theme .testimonial {
+  background: var(--glass-background-dark);
+  border: 1px solid var(--glass-border-dark);
+}
+
+/* Subtle glow effect */
+.testimonial::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(var(--color-accent-500), 0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+  z-index: -1;
 }
 
 .testimonial p {
   font-size: 1.1rem;
-  color: var(--color-text-primary);
+  color: var(--text-primary);
   font-style: italic;
   line-height: 1.6;
-  margin: 0 0 var(--space-3) 0;
+  margin: 0 0 var(--spacing-3) 0;
   position: relative;
 }
 
@@ -420,15 +592,16 @@
   position: absolute;
   left: -1.5rem;
   top: -1.5rem;
-  color: rgba(var(--color-accent-primary-rgb), 0.2);
-  font-family: Georgia, serif;
+  color: rgba(var(--color-primary-500), 0.2);
+  font-family: var(--font-serif);
+  z-index: -1;
 }
 
 .testimonial-author {
   font-size: 0.95rem;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   text-align: right;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 @media (max-width: 1024px) {
@@ -445,7 +618,7 @@
 
 /* Loading State */
 .login-container.loading {
-  background: var(--gradient-bg);
+  background: var(--bg-primary);
 }
 
 .login-loading {
@@ -453,30 +626,36 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-8);
-  background: rgba(var(--color-bg-primary-rgb), 0.8);
-  backdrop-filter: blur(20px);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(var(--color-border-rgb), 0.1);
+  padding: var(--spacing-8);
+  background: var(--glass-background);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  border-radius: var(--border-radius-2xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--glass-border);
+  animation: scaleUp var(--transition-duration-500) var(--transition-timing-ease-out);
+}
+
+.dark-theme .login-loading {
+  background: var(--glass-background-dark);
+  border: 1px solid var(--glass-border-dark);
 }
 
 .login-loading .loading-spinner {
   width: 40px;
   height: 40px;
-  border-width: 4px;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--spacing-4);
 }
 
 .login-loading p {
   font-size: 1.1rem;
-  color: var(--color-text-primary);
+  color: var(--text-primary);
   margin: 0;
 }
 
 @media (max-width: 768px) {
   .login-loading {
-    padding: var(--space-6);
+    padding: var(--spacing-6);
   }
 
   .login-loading .loading-spinner {
@@ -487,19 +666,4 @@
   .login-loading p {
     font-size: 1rem;
   }
-}
-
-/* Dark Theme Adjustments */
-.dark-theme .login-box,
-.dark-theme .testimonial,
-.dark-theme .login-loading {
-  background: rgba(var(--color-bg-secondary-rgb), 0.8);
-}
-
-.dark-theme .feature-item {
-  background: rgba(var(--color-bg-primary-rgb), 0.5);
-}
-
-.dark-theme .feature-item:hover {
-  background: rgba(var(--color-bg-primary-rgb), 0.8);
 }

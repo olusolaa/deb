@@ -1,4 +1,4 @@
-/* Share Verse Styles - Responsive */
+/* Share Verse Styles - Premium Design */
 .share-verse-container {
     position: absolute;
     top: 20px;
@@ -7,8 +7,10 @@
 }
 
 .share-button {
-    background: none;
-    border: none;
+    background: var(--glass-background);
+    backdrop-filter: blur(var(--blur-lg));
+    -webkit-backdrop-filter: blur(var(--blur-lg));
+    border: 1px solid var(--glass-border);
     cursor: pointer;
     font-size: 24px;
     padding: 8px;
@@ -16,17 +18,39 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(4px);
     transition: all 0.3s ease;
     box-shadow: var(--shadow-sm);
     width: 40px;
     height: 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.dark-theme .share-button {
+    background: var(--glass-background-dark);
+    border: 1px solid var(--glass-border-dark);
+}
+
+/* Button shine effect */
+.share-button::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.7) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.share-button:hover::after {
+    opacity: 0.3;
 }
 
 .share-button:hover {
-    transform: scale(1.1);
-    background-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: var(--shadow-md);
 }
 
 .share-icon {
@@ -42,23 +66,31 @@
     position: absolute;
     top: 50px;
     right: 0;
-    background-color: white;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
+    background: var(--glass-background);
+    backdrop-filter: blur(var(--blur-lg));
+    -webkit-backdrop-filter: blur(var(--blur-lg));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-lg);
     width: 250px;
     overflow: hidden;
-    animation: slideIn 0.3s ease-out;
+    animation: scaleUp 0.3s ease-out;
     z-index: var(--z-dropdown);
 }
 
-@keyframes slideIn {
+.dark-theme .share-menu {
+    background: var(--glass-background-dark);
+    border: 1px solid var(--glass-border-dark);
+}
+
+@keyframes scaleUp {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: scale(0.95) translateY(-10px);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: scale(1) translateY(0);
     }
 }
 
@@ -66,20 +98,26 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-3);
-    border-bottom: 1px solid var(--color-border);
+    padding: var(--spacing-3);
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(to right, rgba(var(--color-primary-50), 0.5), rgba(var(--color-primary-100), 0.3));
+}
+
+.dark-theme .share-menu-header {
+    background: linear-gradient(to right, rgba(var(--color-primary-900), 0.5), rgba(var(--color-primary-800), 0.3));
 }
 
 .share-menu-header h4 {
     margin: 0;
     font-size: 1rem;
-    color: var(--color-text-primary);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
 }
 
 .close-share-menu {
     background: none;
     border: none;
-    color: var(--color-text-tertiary);
+    color: var(--text-tertiary);
     cursor: pointer;
     font-size: 16px;
     padding: 4px;
@@ -93,15 +131,20 @@
 }
 
 .close-share-menu:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-    color: var(--color-text-primary);
+    background-color: rgba(var(--color-secondary-200), 0.3);
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+.dark-theme .close-share-menu:hover {
+    background-color: rgba(var(--color-secondary-700), 0.3);
 }
 
 .share-options {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-2);
-    padding: var(--space-3);
+    gap: var(--spacing-2);
+    padding: var(--spacing-3);
 }
 
 .share-option {
@@ -109,37 +152,76 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--space-1);
-    padding: var(--space-2);
-    border-radius: var(--radius-sm);
+    gap: var(--spacing-1);
+    padding: var(--spacing-2);
+    border-radius: var(--border-radius-lg);
     background: none;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border-color);
     cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Button shine effect */
+.share-option::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%
+    );
+    transform: rotate(30deg);
+    transition: transform var(--transition-duration-700) linear;
+    opacity: 0;
+}
+
+.share-option:hover::after {
+    transform: rotate(30deg) translate(100%, 0);
+    opacity: 1;
 }
 
 .share-option:hover {
-    background-color: rgba(var(--color-accent-primary-rgb), 0.05);
+    background-color: rgba(var(--color-primary-500), 0.05);
     transform: translateY(-2px);
+    border-color: rgba(var(--color-primary-500), 0.2);
+    box-shadow: var(--shadow-sm);
 }
 
 .share-option-icon {
     font-size: 20px;
+    transition: transform 0.2s ease;
+}
+
+.share-option:hover .share-option-icon {
+    transform: scale(1.1);
 }
 
 .share-option-text {
     font-size: 0.8rem;
-    color: var(--color-text-secondary);
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+
+.share-option:hover .share-option-text {
+    color: var(--color-primary-600);
 }
 
 .share-status {
     text-align: center;
-    padding: var(--space-2) var(--space-3);
-    background-color: rgba(var(--color-accent-primary-rgb), 0.1);
-    color: var(--color-accent-primary);
+    padding: var(--spacing-2) var(--spacing-3);
+    background-color: rgba(var(--color-primary-500), 0.1);
+    color: var(--color-primary-600);
     font-size: 0.9rem;
-    margin: 0 var(--space-3) var(--space-3);
-    border-radius: var(--radius-sm);
+    margin: 0 var(--spacing-3) var(--spacing-3);
+    border-radius: var(--border-radius-lg);
+    animation: fadeIn 0.3s ease-out;
 }
 
 /* Responsive adjustments */
@@ -179,29 +261,4 @@
     .share-options {
         grid-template-columns: 1fr;
     }
-}
-
-/* Dark theme adjustments */
-.dark-theme .share-button {
-    background-color: rgba(45, 55, 72, 0.5);
-}
-
-.dark-theme .share-button:hover {
-    background-color: rgba(45, 55, 72, 0.8);
-}
-
-.dark-theme .share-menu {
-    background-color: var(--color-bg-secondary);
-}
-
-.dark-theme .share-option {
-    border-color: rgba(var(--color-border-rgb), 0.2);
-}
-
-.dark-theme .share-option:hover {
-    background-color: rgba(var(--color-accent-primary-rgb), 0.1);
-}
-
-.dark-theme .close-share-menu:hover {
-    background-color: rgba(255, 255, 255, 0.1);
 }

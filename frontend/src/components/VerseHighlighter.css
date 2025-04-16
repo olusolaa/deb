@@ -1,7 +1,7 @@
-/* Verse Highlighter Styles - Responsive */
+/* Verse Highlighter Styles - Premium Design */
 .verse-highlighter {
     position: relative;
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--spacing-4);
 }
 
 .highlighted-text {
@@ -15,21 +15,28 @@
 .highlight {
     padding: 2px 0;
     border-radius: 2px;
+    transition: all 0.3s ease;
 }
 
 .highlight-yellow {
-    background-color: rgba(255, 235, 59, 0.4);
-    box-shadow: 0 0 0 2px rgba(255, 235, 59, 0.2);
+    background-color: rgba(250, 204, 21, 0.4);
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.2);
 }
 
 .highlight-green {
-    background-color: rgba(76, 175, 80, 0.3);
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.15);
+    background-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
 }
 
 .highlight-blue {
-    background-color: rgba(33, 150, 243, 0.3);
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.15);
+    background-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+/* Hover effect for highlights */
+.highlight:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
 }
 
 /* Tooltip for highlighting */
@@ -37,13 +44,21 @@
     position: fixed;
     display: flex;
     gap: 8px;
-    padding: 8px;
-    background: white;
+    padding: 10px;
+    background: var(--glass-background);
+    backdrop-filter: blur(var(--blur-lg));
+    -webkit-backdrop-filter: blur(var(--blur-lg));
+    border: 1px solid var(--glass-border);
     border-radius: 20px;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
     z-index: var(--z-tooltip);
     transform: translateX(-50%);
     animation: fadeIn 0.2s ease-out;
+}
+
+.dark-theme .highlight-tooltip {
+    background: var(--glass-background-dark);
+    border: 1px solid var(--glass-border-dark);
 }
 
 @keyframes fadeIn {
@@ -58,34 +73,53 @@
 }
 
 .highlight-btn {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: all 0.2s ease;
     padding: 0;
     box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.highlight-btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.7) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.highlight-btn:hover::after {
+    opacity: 0.3;
 }
 
 .highlight-btn:hover {
     transform: scale(1.15);
+    box-shadow: var(--shadow-md);
 }
 
 .highlight-yellow {
-    background-color: #ffeb3b;
+    background-color: #facc15;
 }
 
 .highlight-green {
-    background-color: #4caf50;
+    background-color: #10b981;
 }
 
 .highlight-blue {
-    background-color: #2196f3;
+    background-color: #6366f1;
 }
 
 .highlight-cancel {
-    background-color: #f44336;
+    background-color: #ef4444;
     color: white;
     font-size: 12px;
     display: flex;
@@ -96,29 +130,42 @@
 /* Responsive adjustments for highlight buttons */
 @media (max-width: 768px) {
     .highlight-btn {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
     }
 
     .highlight-tooltip {
-        padding: 10px;
+        padding: 12px;
     }
 }
 
 /* Highlights list */
 .highlights-list {
-    margin-top: var(--space-4);
-    padding: var(--space-3);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-md);
-    border-left: 3px solid var(--color-accent-primary);
+    margin-top: var(--spacing-4);
+    padding: var(--spacing-3);
+    background: rgba(var(--color-primary-50), 0.3);
+    border-radius: var(--border-radius-lg);
+    border-left: 3px solid var(--color-primary-500);
+    animation: slideUp 0.3s ease-out;
+}
+
+.dark-theme .highlights-list {
+    background: rgba(var(--color-primary-900), 0.3);
 }
 
 .highlights-list h4 {
     margin-top: 0;
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--spacing-2);
     font-size: 1.1rem;
-    color: var(--color-accent-primary);
+    color: var(--color-primary-600);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.highlights-list h4::before {
+    content: "✨";
+    font-size: 0.9rem;
 }
 
 .highlights-list ul {
@@ -127,16 +174,22 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--spacing-2);
 }
 
 .highlight-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: var(--border-radius-lg);
     font-size: 0.9rem;
+    animation: fadeIn 0.3s ease-out;
+    transition: all 0.3s ease;
+}
+
+.highlight-item:hover {
+    transform: translateX(5px);
 }
 
 .highlight-text {
@@ -154,23 +207,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     transition: all 0.2s ease;
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .remove-highlight:hover {
     background-color: rgba(0, 0, 0, 0.1);
     color: rgba(0, 0, 0, 0.8);
+    transform: rotate(90deg);
 }
 
 /* Dark theme adjustments */
-.dark-theme .highlight-tooltip {
-    background: var(--color-bg-secondary);
-}
-
 .dark-theme .remove-highlight {
     color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .dark-theme .remove-highlight:hover {
@@ -187,6 +239,6 @@
     }
 
     .highlight-item {
-        padding: var(--space-2);
+        padding: var(--spacing-2);
     }
 }

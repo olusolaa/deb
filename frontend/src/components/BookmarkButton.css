@@ -1,4 +1,4 @@
-/* Bookmark Button Styles - Responsive */
+/* Bookmark Button Styles - Premium Design */
 .bookmark-container {
     position: absolute;
     top: 20px;
@@ -7,8 +7,10 @@
 }
 
 .bookmark-button {
-    background: none;
-    border: none;
+    background: var(--glass-background);
+    backdrop-filter: blur(var(--blur-lg));
+    -webkit-backdrop-filter: blur(var(--blur-lg));
+    border: 1px solid var(--glass-border);
     cursor: pointer;
     font-size: 24px;
     padding: 8px;
@@ -16,17 +18,39 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(4px);
     transition: all 0.3s ease;
     box-shadow: var(--shadow-sm);
     width: 40px;
     height: 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.dark-theme .bookmark-button {
+    background: var(--glass-background-dark);
+    border: 1px solid var(--glass-border-dark);
+}
+
+/* Button shine effect */
+.bookmark-button::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.7) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.bookmark-button:hover::after {
+    opacity: 0.3;
 }
 
 .bookmark-button:hover {
-    transform: scale(1.1);
-    background-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: var(--shadow-md);
 }
 
 .bookmark-button.bookmarked {
@@ -48,24 +72,35 @@
     position: absolute;
     top: 50px;
     right: 0;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 4px;
+    background: var(--glass-background);
+    backdrop-filter: blur(var(--blur-lg));
+    -webkit-backdrop-filter: blur(var(--blur-lg));
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: var(--border-radius-lg);
     font-size: 14px;
     white-space: nowrap;
     animation: fadeInOut 2s ease-in-out;
     z-index: var(--z-tooltip);
+    box-shadow: var(--shadow-md);
+}
+
+.dark-theme .bookmark-tooltip {
+    background: var(--glass-background-dark);
+    border: 1px solid var(--glass-border-dark);
 }
 
 @keyframes fadeInOut {
     0%,
     100% {
         opacity: 0;
+        transform: translateY(10px);
     }
     20%,
     80% {
         opacity: 1;
+        transform: translateY(0);
     }
 }
 
@@ -93,13 +128,4 @@
         height: 40px;
         font-size: 20px;
     }
-}
-
-/* Dark theme adjustments */
-.dark-theme .bookmark-button {
-    background-color: rgba(45, 55, 72, 0.5);
-}
-
-.dark-theme .bookmark-button:hover {
-    background-color: rgba(45, 55, 72, 0.8);
 }

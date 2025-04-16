@@ -1,19 +1,26 @@
-/* Theme Toggle Styles - Responsive */
+/* Theme Toggle Styles - Premium Design */
 .theme-toggle {
     position: fixed;
     top: 20px;
     right: 20px;
     z-index: var(--z-tooltip);
-    background: none;
-    border: none;
+    background: var(--glass-background);
+    backdrop-filter: blur(var(--blur-lg));
+    -webkit-backdrop-filter: blur(var(--blur-lg));
+    border: 1px solid var(--glass-border);
     padding: 0;
     cursor: pointer;
     width: 56px;
     height: 28px;
-    border-radius: 14px;
+    border-radius: 28px;
     overflow: hidden;
     transition: all 0.3s ease;
     box-shadow: var(--shadow-md);
+}
+
+.dark-theme .theme-toggle {
+    background: var(--glass-background-dark);
+    border: 1px solid var(--glass-border-dark);
 }
 
 .toggle-track {
@@ -21,7 +28,7 @@
     width: 100%;
     height: 100%;
     background: linear-gradient(to right, #f5f7fa, #c3cfe2);
-    border-radius: 14px;
+    border-radius: 28px;
     transition: all 0.3s ease;
 }
 
@@ -42,6 +49,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 2;
 }
 
 .theme-toggle.dark .toggle-indicator {
@@ -52,6 +60,34 @@
 .toggle-icon {
     font-size: 14px;
     line-height: 1;
+    transition: all 0.3s ease;
+}
+
+/* Sun and moon icons */
+.toggle-icon::before {
+    content: "☀️";
+}
+
+.theme-toggle.dark .toggle-icon::before {
+    content: "🌙";
+}
+
+/* Subtle glow effect */
+.toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.7) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+}
+
+.theme-toggle:hover .toggle-track::after {
+    opacity: 0.3;
 }
 
 /* Responsive adjustments */
