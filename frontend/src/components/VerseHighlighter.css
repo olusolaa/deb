@@ -1,7 +1,7 @@
-/* Verse Highlighter Styles */
+/* Verse Highlighter Styles - Responsive */
 .verse-highlighter {
     position: relative;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-4);
 }
 
 .highlighted-text {
@@ -40,8 +40,8 @@
     padding: 8px;
     background: white;
     border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
+    box-shadow: var(--shadow-md);
+    z-index: var(--z-tooltip);
     transform: translateX(-50%);
     animation: fadeIn 0.2s ease-out;
 }
@@ -65,7 +65,7 @@
     cursor: pointer;
     transition: transform 0.2s ease;
     padding: 0;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .highlight-btn:hover {
@@ -93,20 +93,32 @@
     justify-content: center;
 }
 
+/* Responsive adjustments for highlight buttons */
+@media (max-width: 768px) {
+    .highlight-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .highlight-tooltip {
+        padding: 10px;
+    }
+}
+
 /* Highlights list */
 .highlights-list {
-    margin-top: 1.5rem;
-    padding: 1rem;
+    margin-top: var(--space-4);
+    padding: var(--space-3);
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    border-left: 3px solid #4e7cff;
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--color-accent-primary);
 }
 
 .highlights-list h4 {
     margin-top: 0;
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--space-2);
     font-size: 1.1rem;
-    color: #4e7cff;
+    color: var(--color-accent-primary);
 }
 
 .highlights-list ul {
@@ -115,15 +127,15 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .highlight-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
     font-size: 0.9rem;
 }
 
@@ -150,4 +162,31 @@
 .remove-highlight:hover {
     background-color: rgba(0, 0, 0, 0.1);
     color: rgba(0, 0, 0, 0.8);
+}
+
+/* Dark theme adjustments */
+.dark-theme .highlight-tooltip {
+    background: var(--color-bg-secondary);
+}
+
+.dark-theme .remove-highlight {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.dark-theme .remove-highlight:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Touch-friendly adjustments */
+@media (max-width: 768px) {
+    .remove-highlight {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .highlight-item {
+        padding: var(--space-2);
+    }
 }

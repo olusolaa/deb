@@ -1,4 +1,4 @@
-/* Bookmark Button Styles */
+/* Bookmark Button Styles - Responsive */
 .bookmark-container {
     position: absolute;
     top: 20px;
@@ -19,7 +19,7 @@
     background-color: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(4px);
     transition: all 0.3s ease;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     width: 40px;
     height: 40px;
 }
@@ -55,6 +55,7 @@
     font-size: 14px;
     white-space: nowrap;
     animation: fadeInOut 2s ease-in-out;
+    z-index: var(--z-tooltip);
 }
 
 @keyframes fadeInOut {
@@ -65,6 +66,32 @@
     20%,
     80% {
         opacity: 1;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .bookmark-container {
+        top: 16px;
+        right: 16px;
+    }
+
+    .bookmark-button {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bookmark-container {
+        top: 12px;
+        right: 12px;
+    }
+
+    .bookmark-button {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
     }
 }
 
