@@ -27,7 +27,7 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-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}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_BASE_URL=https://openrouter.ai
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-google/gemini-2.0-flash-exp:free}
       - PORT=8084
