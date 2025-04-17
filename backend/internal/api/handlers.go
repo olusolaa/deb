@@ -138,16 +138,16 @@ func (h *APIHandler) HandleGoogleCallback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// 5. Success! Set the JWT as a cookie (or return in JSON for frontend to store)
-	// Setting as HttpOnly cookie is generally more secure against XSS
+	// 5. Success! Set the JWT as a cookie that works cross-domain
+	// For cross-domain cookies to work, we need specific settings
 	jwtCookie := http.Cookie{
 		Name:     "auth_token",
 		Value:    jwtToken,
 		Path:     "/",
 		Expires:  time.Now().Add(time.Hour * 24 * 7), // Match JWT expiry
-		HttpOnly: true,
-		// Secure:   true, // Set to true if using HTTPS
-		SameSite: http.SameSiteLaxMode, // Lax is often suitable
+		HttpOnly: true, 
+		Secure:   true, // Required for SameSite=None
+		SameSite: http.SameSiteNoneMode, // Required for cross-domain cookies
 	}
 	http.SetCookie(w, &jwtCookie)
 
@@ -165,8 +165,8 @@ func (h *APIHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Unix(0, 0), // Expire immediately
 		HttpOnly: true,
-		// Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   true, // Required for SameSite=None
+		SameSite: http.SameSiteNoneMode, // Required for cross-domain cookies
 	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
