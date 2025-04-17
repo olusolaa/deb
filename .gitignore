@@ -4,6 +4,10 @@ node_modules
 .pnp.js
 
 # Environment Variables
+.env
+.env.*
+*/backend/.env
+*/backend/.env.*
 .env.development.local
 .env.test.local
 .env.production.local
