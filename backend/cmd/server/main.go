@@ -285,7 +285,7 @@ func main() {
 	authService := service.NewAuthService(googleOAuthConfig, userRepo, cfg.JWTSecret) // Auth service for Google OAuth
 
 	// 4. API Handler (Inject all services)
-	apiHandler := api.NewAPIHandler(chatService, planService, verseService, authService, cfg.JWTSecret)
+	apiHandler := api.NewAPIHandler(chatService, planService, verseService, authService, cfg.JWTSecret, cfg.CorsAllowedOrigin)
 
 	// 5. Router
 	router := api.NewRouter(apiHandler, cfg.CorsAllowedOrigin)

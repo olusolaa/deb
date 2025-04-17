@@ -32,21 +32,23 @@ type UserClaims struct {
 
 // APIHandler now includes AuthService, VerseService and JWT secret
 type APIHandler struct {
-	chatService  service.ChatService
-	planService  service.PlanService
-	verseService service.VerseService // Add VerseService for on-demand verse content
-	authService  *service.AuthService // Add AuthService
-	jwtSecret    []byte               // Store JWT secret for middleware
+	chatService       service.ChatService
+	planService       service.PlanService
+	verseService      service.VerseService // Add VerseService for on-demand verse content
+	authService       *service.AuthService // Add AuthService
+	jwtSecret         []byte               // Store JWT secret for middleware
+	corsAllowedOrigin string               // Store CORS allowed origin for redirects
 }
 
 // Update NewAPIHandler
-func NewAPIHandler(cs service.ChatService, ps service.PlanService, vs service.VerseService, as *service.AuthService, jwtSecret string) *APIHandler {
+func NewAPIHandler(cs service.ChatService, ps service.PlanService, vs service.VerseService, as *service.AuthService, jwtSecret string, corsAllowedOrigin string) *APIHandler {
 	return &APIHandler{
-		chatService:  cs,
-		planService:  ps,
-		verseService: vs, // Inject VerseService
-		authService:  as, // Inject AuthService
-		jwtSecret:    []byte(jwtSecret),
+		chatService:       cs,
+		planService:       ps,
+		verseService:      vs, // Inject VerseService
+		authService:       as, // Inject AuthService
+		jwtSecret:         []byte(jwtSecret),
+		corsAllowedOrigin: corsAllowedOrigin,
 	}
 }
 
@@ -150,8 +152,8 @@ func (h *APIHandler) HandleGoogleCallback(w http.ResponseWriter, r *http.Request
 	http.SetCookie(w, &jwtCookie)
 
 	// Redirect the user to the frontend application homepage or dashboard
-	// Extract the frontend URL from the CORS allowed origin
-	frontendURL := "http://localhost:3000"
+	// Use the CORS allowed origin as the frontend URL
+	frontendURL := h.corsAllowedOrigin
 	http.Redirect(w, r, frontendURL, http.StatusSeeOther)
 }
 
