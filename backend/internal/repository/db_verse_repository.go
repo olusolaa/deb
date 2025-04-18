@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,7 +12,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// MongoVerseRepository implements VerseRepository interface using MongoDB
+type VerseRepository interface {
+	GetVerseByReference(ctx context.Context, reference string) (string, error)
+	GetVersesByReferences(ctx context.Context, references []string) (map[string]string, error)
+}
+
 type MongoVerseRepository struct {
 	collection *mongo.Collection
 }
@@ -24,6 +29,14 @@ type BibleVerse struct {
 	Verse       int    `bson:"verse"`
 	Text        string `bson:"text"`
 	Translation string `bson:"translation"`
+}
+
+// verseRangeInfo stores information about a verse range for batch processing
+type verseRangeInfo struct {
+	book       string
+	chapter    int
+	startVerse int
+	endVerse   int
 }
 
 // NewMongoVerseRepository creates a new repository that uses MongoDB to fetch verse content
@@ -75,6 +88,191 @@ func (r *MongoVerseRepository) GetVerseByReference(ctx context.Context, referenc
 	}
 
 	return text, nil
+}
+
+// GetVersesByReferences fetches multiple verse texts in a single database operation
+// Returns a map of reference -> verse text
+func (r *MongoVerseRepository) GetVersesByReferences(ctx context.Context, references []string) (map[string]string, error) {
+	result := make(map[string]string)
+
+	// Create combined query for all references (singles and ranges)
+	var allConditions []bson.M
+	refToRangeInfo := make(map[string]verseRangeInfo)
+
+	// Process all references and build query conditions
+	for _, ref := range references {
+		if isVerseRange(ref) {
+			// Handle verse range
+			conditions, rangeInfo, err := r.buildRangeQueryCondition(ref)
+			if err != nil {
+				log.Printf("WARN: Failed to process range reference '%s': %v", ref, err)
+				continue
+			}
+
+			// Store range info for later processing
+			refToRangeInfo[ref] = rangeInfo
+
+			// Add range conditions to the query
+			allConditions = append(allConditions, conditions)
+		} else {
+			// Handle single verse reference
+			book, chapter, verse, err := parseReference(ref)
+			if err != nil {
+				log.Printf("WARN: Failed to parse reference '%s': %v", ref, err)
+				continue
+			}
+
+			// Get book index and convert to database format
+			bookIndex := getBookIndex(book)
+			dbBook := fmt.Sprintf("Book %d", bookIndex+1) // Convert 0-based index to 1-based
+			if bookIndex < 0 {
+				// If book not found, try using the original name as fallback
+				dbBook = book
+			}
+
+			// Create condition for this verse
+			condition := bson.M{
+				"book":    dbBook,
+				"chapter": chapter,
+				"verse":   verse,
+			}
+
+			allConditions = append(allConditions, condition)
+		}
+	}
+
+	// If we have conditions, execute a single query for all verses
+	if len(allConditions) > 0 {
+		log.Printf("INFO: Executing batch query for %d references with %d conditions",
+			len(references), len(allConditions))
+
+		// Create a combined query with $or operator
+		filter := bson.M{"$or": allConditions}
+
+		// Execute the query
+		cursor, err := r.collection.Find(ctx, filter)
+		if err != nil {
+			log.Printf("ERROR: Failed to execute batch query: %v", err)
+			// Continue with empty result rather than returning error
+		} else {
+			defer cursor.Close(ctx)
+
+			// Process results and build verse map (book -> dbVerseID -> BibleVerse struct)
+			verseMap := make(map[string]map[int]BibleVerse)
+
+			for cursor.Next(ctx) {
+				var verse BibleVerse
+				if err := cursor.Decode(&verse); err != nil {
+					log.Printf("WARN: Failed to decode verse in batch: %v", err)
+					continue
+				}
+
+				// Initialize book map if needed
+				if _, exists := verseMap[verse.Book]; !exists {
+					verseMap[verse.Book] = make(map[int]BibleVerse)
+				}
+
+				// Store the full verse struct, keyed by database verse ID
+				verseMap[verse.Book][verse.Verse] = verse
+			}
+
+			// Process single references
+			for _, ref := range references {
+				if !isVerseRange(ref) {
+					book, chapter, verse, err := parseReference(ref)
+					if err != nil {
+						continue
+					}
+					bookIndex := getBookIndex(book)
+					dbBook := fmt.Sprintf("Book %d", bookIndex+1)
+					if bookIndex < 0 {
+						dbBook = book
+					}
+
+					// Calculate the expected database verse ID for the single verse
+					dbVerseID := mapVerseNumber(bookIndex, chapter, verse)
+
+					// Check if we have this verse in our results map
+					if bookData, ok := verseMap[dbBook]; ok {
+						if verseData, ok := bookData[dbVerseID]; ok {
+							result[ref] = verseData.Text // Get text from stored struct
+						}
+					}
+				}
+			}
+
+			// Process range references
+			for ref, rangeInfo := range refToRangeInfo {
+				var versesInRange []BibleVerse
+				log.Printf("DEBUG: Processing batch range ref %s: %s %d:%d-%d",
+					ref, rangeInfo.book, rangeInfo.chapter, rangeInfo.startVerse, rangeInfo.endVerse)
+
+				// Get all verses fetched for this book
+				if bookDataMap, bookFound := verseMap[rangeInfo.book]; bookFound {
+					bookIndex := getBookIndex(rangeInfo.book) // Need index for simple verse extraction
+					if bookIndex < 0 {
+						// Attempt to get index from parsed book name if rangeInfo.book was a fallback
+						parsedBook, _, _, _ := parseReference(ref) // Reparse might be inefficient but gets original book name
+						bookIndex = getBookIndex(parsedBook)
+					}
+
+					// Iterate through all verses found for this book
+					for dbVerseID, verseData := range bookDataMap {
+						// Extract the simple verse number from the database ID
+						simpleVerse := extractSimpleVerse(bookIndex, dbVerseID)
+						if simpleVerse >= rangeInfo.startVerse && simpleVerse <= rangeInfo.endVerse {
+							// If it's within the requested range, add it to our list
+							versesInRange = append(versesInRange, verseData)
+						}
+					}
+
+					// Sort the collected verses by simple verse number
+					sort.Slice(versesInRange, func(i, j int) bool {
+						// Need bookIndex to extract simple verse for comparison
+						simpleI := extractSimpleVerse(bookIndex, versesInRange[i].Verse)
+						simpleJ := extractSimpleVerse(bookIndex, versesInRange[j].Verse)
+						// Handle potential extraction errors defensively
+						if simpleI == -1 {
+							return false
+						} // Put errors at the end
+						if simpleJ == -1 {
+							return true
+						}
+						return simpleI < simpleJ
+					})
+
+					// Build the final string from sorted verses
+					var versesText strings.Builder
+					for _, verseData := range versesInRange {
+						simpleVerse := extractSimpleVerse(bookIndex, verseData.Verse)
+						if simpleVerse != -1 { // Only include verses where extraction worked
+							if versesText.Len() > 0 {
+								versesText.WriteString(" ")
+							}
+							versesText.WriteString(fmt.Sprintf("[%d] %s", simpleVerse, verseData.Text))
+						} else {
+							log.Printf("WARN: Skipping verse with failed simple verse extraction: BookIndex=%d, DBVerseID=%d", bookIndex, verseData.Verse)
+						}
+					}
+
+					// If we found any verses in the range, store the result
+					if versesText.Len() > 0 {
+						result[ref] = versesText.String()
+					} else {
+						log.Printf("DEBUG: No verses found within range %d-%d for book %s after filtering %d fetched verses",
+							rangeInfo.startVerse, rangeInfo.endVerse, rangeInfo.book, len(bookDataMap))
+					}
+				} else {
+					log.Printf("DEBUG: Book %s not found in results map", rangeInfo.book)
+				}
+			}
+		}
+	}
+
+	// Log results summary
+	log.Printf("INFO: Fetched %d/%d requested verse references in batch", len(result), len(references))
+
+	return result, nil
 }
 
 // parseReference parses a verse reference like "John 3:16" into components
@@ -151,62 +349,78 @@ func parseVerseRange(reference string) (book string, chapter int, startVerse int
 	return book, chapter, startVerse, endVerse, nil
 }
 
-// mapVerseNumber converts from standard Bible verse numbers to the database verseid format
-func mapVerseNumber(bookIndex int, chapter int, verse int) int {
-	// According to the README:
-	// Verseid field is a combination of Book + Chapter + Verse
-	// First two digits: Book (0-65)
-	// Next three digits: Chapter
-	// Last three digits: Verse
-	// All indices are 0-based in the original data
+// mapVerseNumber converts a book index, chapter, and verse into the database's numeric verse ID format.
+// Format depends on the book:
+// - Genesis (index 0): ID is just the verse number
+// - Other books (index > 0): ID is bookIndex * 1,000,000 + verse number
+func mapVerseNumber(bookIndex, chapter, verse int) int {
+	// Input validation: Ensure non-negative index and positive verse
+	if bookIndex < 0 || verse <= 0 { // Chapter is not used in ID calculation based on samples
+		log.Printf("WARN: Invalid input to mapVerseNumber: bookIndex=%d, verse=%d", bookIndex, verse)
+		return -1 // Indicate error
+	}
 
-	// Adjusting for 0-based indexing in the original data
-	adjustedChapter := chapter - 1
-	adjustedVerse := verse - 1
-
-	// Create the verseid according to the format
-	return (bookIndex * 1000000) + (adjustedChapter * 1000) + adjustedVerse
+	if bookIndex == 0 { // Genesis
+		return verse
+	}
+	// Other books
+	return (bookIndex * 1000000) + verse
 }
 
-// Helper function to find a single verse with multiple fallback approaches
+// extractSimpleVerse attempts to recover the simple verse number from the database verse ID format.
+func extractSimpleVerse(bookIndex, dbVerseID int) int {
+	if bookIndex < 0 || dbVerseID <= 0 {
+		log.Printf("WARN: Invalid input to extractSimpleVerse: bookIndex=%d, dbVerseID=%d", bookIndex, dbVerseID)
+		return -1 // Indicate error
+	}
+
+	if bookIndex == 0 { // Genesis
+		return dbVerseID // For Genesis, the ID is the simple verse number
+	}
+	// For other books, ID is bookIndex * 1,000,000 + simple_verse_number
+	simpleVerse := dbVerseID - (bookIndex * 1000000)
+	if simpleVerse <= 0 {
+		log.Printf("WARN: Calculated negative/zero simple verse for bookIndex=%d, dbVerseID=%d -> %d", bookIndex, dbVerseID, simpleVerse)
+		return -1 // Indicate calculation error
+	}
+	return simpleVerse
+}
+
+// findSingleVerse finds a single verse with multiple fallback approaches
 func (r *MongoVerseRepository) findSingleVerse(ctx context.Context, book string, chapter int, verse int) (string, error) {
 	// First get the book index
 	bookIndex := getBookIndex(book)
 	var err error // Declare the err variable once at the function level
 
-	// Use the original database format approach - search by verseid
-	if bookIndex >= 0 {
-		// Map to the verseid format described in the README
-		mappedVerse := mapVerseNumber(bookIndex, chapter, verse)
-
-		// Create a filter based on our understanding of the database format
-		filter := bson.M{
-			"verse": mappedVerse,
-		}
-
-		// Try to find by verseid
-		var result BibleVerse
-		err = r.collection.FindOne(ctx, filter).Decode(&result)
-		if err == nil {
-			return result.Text, nil
-		}
+	// Convert book name to database format (Book X)
+	dbBook := fmt.Sprintf("Book %d", bookIndex+1) // Convert 0-based index to 1-based
+	if bookIndex < 0 {
+		// If book not found, try using the original name as fallback
+		dbBook = book
 	}
 
-	// Fallback to the standard approach if the above doesn't work
-	// Create a filter for this verse
+	// Primary approach: use standard book/chapter/verse fields
 	filter := bson.M{
+		"book":    dbBook,
 		"chapter": chapter,
 		"verse":   verse,
 	}
 
-	// First try to query by book_index, which is most reliable with our imported data
-	// Note: We already calculated bookIndex earlier, no need to call getBookIndex again
+	// Try to find by primary fields
+	var result BibleVerse
+	err = r.collection.FindOne(ctx, filter).Decode(&result)
+	if err == nil {
+		return result.Text, nil
+	}
 	if bookIndex >= 0 {
-		filter["book_index"] = bookIndex
+		filter = bson.M{
+			"book_index": bookIndex,
+			"chapter":    chapter,
+			"verse":      verse,
+		}
 
-		// Try to find by book index first
-		var result BibleVerse
-		err = r.collection.FindOne(ctx, filter).Decode(&result) // Using = since err is declared at function level
+		// Try to find by book_index/chapter/verse
+		err = r.collection.FindOne(ctx, filter).Decode(&result)
 		if err == nil {
 			return result.Text, nil
 		}
@@ -216,8 +430,7 @@ func (r *MongoVerseRepository) findSingleVerse(ctx context.Context, book string,
 	delete(filter, "book_index") // Remove book_index from filter if it was added
 	filter["book"] = book
 
-	var result BibleVerse
-	err = r.collection.FindOne(ctx, filter).Decode(&result) // Using = instead of := since err is already declared
+	err = r.collection.FindOne(ctx, filter).Decode(&result)
 	if err == nil {
 		return result.Text, nil
 	}
@@ -248,44 +461,122 @@ func (r *MongoVerseRepository) findSingleVerse(ctx context.Context, book string,
 	return "", fmt.Errorf("failed to query verse: %w", err)
 }
 
-// getVerseRange gets a range of verses and concatenates them
-func (r *MongoVerseRepository) getVerseRange(ctx context.Context, reference string) (string, error) {
+// buildRangeQueryCondition creates MongoDB query conditions for a verse range
+func (r *MongoVerseRepository) buildRangeQueryCondition(reference string) (bson.M, verseRangeInfo, error) {
 	// Parse the range
 	book, chapter, startVerse, endVerse, err := parseVerseRange(reference)
 	if err != nil {
-		return "", err
+		return nil, verseRangeInfo{}, err
 	}
 
 	// Validate the range
 	if endVerse < startVerse {
-		return "", fmt.Errorf("invalid verse range: end verse must be greater than or equal to start verse")
+		return nil, verseRangeInfo{}, fmt.Errorf("invalid verse range: end verse must be greater than or equal to start verse")
 	}
 
-	if endVerse-startVerse > 30 {
-		return "", fmt.Errorf("verse range too large: maximum is 30 verses")
+	// Get book index and convert to database format
+	bookIndex := getBookIndex(book)
+	dbBook := fmt.Sprintf("Book %d", bookIndex+1) // Convert 0-based index to 1-based
+	if bookIndex < 0 {
+		// If book not found, try using the original name as fallback
+		dbBook = book
 	}
 
-	// Build verses text
-	var versesText strings.Builder
-	for verse := startVerse; verse <= endVerse; verse++ {
-		// Get this verse
-		text, err := r.findSingleVerse(ctx, book, chapter, verse)
-		if err != nil {
-			// If this specific verse is not found, log and continue to next
-			log.Printf("WARN: Verse %s %d:%d in range not found", book, chapter, verse)
+	// Create a range query: verses within this chapter between startVerse and endVerse
+	// Map verse numbers to the database format (e.g., 1 -> 1002001 for Exodus 3:1)
+	dbStartVerse := mapVerseNumber(bookIndex, chapter, startVerse)
+	dbEndVerse := mapVerseNumber(bookIndex, chapter, endVerse)
+
+	log.Printf("DEBUG: Mapping verse range %d-%d to database format: %d-%d", startVerse, endVerse, dbStartVerse, dbEndVerse)
+
+	condition := bson.M{
+		"book": dbBook,
+		"verse": bson.M{
+			"$gte": dbStartVerse,
+			"$lte": dbEndVerse,
+		},
+	}
+
+	// Return the condition and range info for later processing
+	return condition, verseRangeInfo{
+		book:       dbBook, // Store the database book name
+		chapter:    chapter,
+		startVerse: startVerse,
+		endVerse:   endVerse,
+	}, nil
+}
+
+// getVerseRange gets a range of verses and concatenates them
+func (r *MongoVerseRepository) getVerseRange(ctx context.Context, reference string) (string, error) {
+	// Parse the range
+	condition, rangeInfo, err := r.buildRangeQueryCondition(reference)
+	if err != nil {
+		return "", err
+	}
+
+	// Execute query to get all verses in the range at once
+	cursor, err := r.collection.Find(ctx, condition)
+	if err != nil {
+		return "", fmt.Errorf("database query failed: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	// Add debug logging for the query condition
+	log.Printf("DEBUG: Verse range query condition: %+v", condition)
+
+	// Create a map to store verses by verse number
+	verseMap := make(map[int]string)
+	for cursor.Next(ctx) {
+		var verse BibleVerse
+		if err := cursor.Decode(&verse); err != nil {
 			continue
 		}
+		// Log each verse we retrieve
+		log.Printf("DEBUG: Retrieved verse %d: %s", verse.Verse, verse.Text[:20])
+		verseMap[verse.Verse] = verse.Text
+	}
 
-		// Add verse number and text
-		if versesText.Len() > 0 {
-			versesText.WriteString(" ")
+	// Log the verse numbers found
+	var foundVerses []int
+	for v := range verseMap {
+		foundVerses = append(foundVerses, v)
+	}
+	log.Printf("DEBUG: Found verses: %v for range %s, expected verses %d-%d",
+		foundVerses, reference, rangeInfo.startVerse, rangeInfo.endVerse)
+
+	// Build the formatted result in verse order
+	var versesText strings.Builder
+	bookIndex := getBookIndex(rangeInfo.book)
+	if strings.HasPrefix(rangeInfo.book, "Book ") {
+		// Extract book index from format "Book X"
+		_, err := fmt.Sscanf(rangeInfo.book, "Book %d", &bookIndex)
+		if err != nil {
+			log.Printf("WARN: Could not parse book index from %s: %v", rangeInfo.book, err)
 		}
-		versesText.WriteString(fmt.Sprintf("(%d) %s", verse, text))
+		// Adjust to 0-based for internal use
+		bookIndex--
+	}
+
+	for verse := rangeInfo.startVerse; verse <= rangeInfo.endVerse; verse++ {
+		// Map the simple verse number to database format
+		dbVerse := mapVerseNumber(bookIndex, rangeInfo.chapter, verse)
+		log.Printf("DEBUG: Looking for verse %d (db format: %d)", verse, dbVerse)
+
+		if text, ok := verseMap[dbVerse]; ok {
+			if versesText.Len() > 0 {
+				versesText.WriteString(" ")
+			}
+			log.Printf("DEBUG: Adding verse %d text to output", verse)  // Changed log message
+			versesText.WriteString(fmt.Sprintf("[%d] %s", verse, text)) // Add verse number for clarity
+		} else {
+			log.Printf("DEBUG: Verse %d (db format %d) missing in retrieved map", verse, dbVerse) // Adjusted log message
+		}
 	}
 
 	// Check if we found any verses in the range
 	if versesText.Len() == 0 {
-		return "", fmt.Errorf("no verses found in range %s %d:%d-%d", book, chapter, startVerse, endVerse)
+		return "", fmt.Errorf("no verses found in range %s %d:%d-%d",
+			rangeInfo.book, rangeInfo.chapter, rangeInfo.startVerse, rangeInfo.endVerse)
 	}
 
 	return versesText.String(), nil

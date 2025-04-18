@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // Context key type for user info
@@ -145,8 +146,8 @@ func (h *APIHandler) HandleGoogleCallback(w http.ResponseWriter, r *http.Request
 		Value:    jwtToken,
 		Path:     "/",
 		Expires:  time.Now().Add(time.Hour * 24 * 7), // Match JWT expiry
-		HttpOnly: true, 
-		Secure:   true, // Required for SameSite=None
+		HttpOnly: true,
+		Secure:   true,                  // Required for SameSite=None
 		SameSite: http.SameSiteNoneMode, // Required for cross-domain cookies
 	}
 	http.SetCookie(w, &jwtCookie)
@@ -165,7 +166,7 @@ func (h *APIHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Unix(0, 0), // Expire immediately
 		HttpOnly: true,
-		Secure:   true, // Required for SameSite=None
+		Secure:   true,                  // Required for SameSite=None
 		SameSite: http.SameSiteNoneMode, // Required for cross-domain cookies
 	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
@@ -274,6 +275,14 @@ type CreatePlanRequest struct {
 	DurationDays int    `json:"duration_days"`
 }
 
+// UpdatePlanRequest for plan updates
+type UpdatePlanRequest struct {
+	ID           string              `json:"id"`
+	Topic        string              `json:"topic"`
+	DurationDays int                 `json:"duration_days"`
+	DailyVerses  []domain.DailyVerse `json:"daily_verses"`
+}
+
 // HandleCreatePlan now associates the plan with the logged-in user
 func (h *APIHandler) HandleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	userClaims, ok := UserFromContext(r.Context())
@@ -322,6 +331,117 @@ func (h *APIHandler) HandleListPlans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, plans)
+}
+
+// HandleDeletePlan handles plan deletion
+func (h *APIHandler) HandleDeletePlan(w http.ResponseWriter, r *http.Request) {
+	// Extract user from context
+	userClaims, ok := UserFromContext(r.Context())
+	if !ok {
+		writeError(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	// Extract plan ID from URL path or query parameter
+	planID := r.URL.Query().Get("id")
+	if planID == "" {
+		writeError(w, "Plan ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Call service to delete plan
+	err := h.planService.DeletePlan(r.Context(), planID, userClaims.UserID)
+	if err != nil {
+		log.Printf("ERROR: Failed to delete plan: %v", err)
+
+		if err.Error() == "plan not found" {
+			writeError(w, "Plan not found", http.StatusNotFound)
+			return
+		}
+
+		if strings.Contains(err.Error(), "unauthorized") {
+			writeError(w, "Unauthorized to delete this plan", http.StatusForbidden)
+			return
+		}
+
+		writeError(w, "Failed to delete plan", http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Plan deleted successfully"})
+}
+
+// HandleUpdatePlan handles plan updates
+func (h *APIHandler) HandleUpdatePlan(w http.ResponseWriter, r *http.Request) {
+	// Extract user from context
+	userClaims, ok := UserFromContext(r.Context())
+	if !ok {
+		writeError(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse request body
+	var req UpdatePlanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("ERROR: Failed to parse update plan request: %v", err)
+		writeError(w, "Invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if req.ID == "" {
+		writeError(w, "Plan ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.Topic == "" {
+		writeError(w, "Topic is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.DurationDays <= 0 {
+		writeError(w, "Duration days must be positive", http.StatusBadRequest)
+		return
+	}
+
+	// Parse UUID
+	planID, err := uuid.Parse(req.ID)
+	if err != nil {
+		log.Printf("ERROR: Invalid plan ID format: %v", err)
+		writeError(w, "Invalid plan ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Create plan object from request
+	plan := domain.ReadingPlan{
+		ID:           planID,
+		Topic:        req.Topic,
+		DurationDays: req.DurationDays,
+		DailyVerses:  req.DailyVerses,
+	}
+
+	// Call service to update plan
+	err = h.planService.UpdatePlan(r.Context(), plan, userClaims.UserID)
+	if err != nil {
+		log.Printf("ERROR: Failed to update plan: %v", err)
+
+		if err.Error() == "plan not found" {
+			writeError(w, "Plan not found", http.StatusNotFound)
+			return
+		}
+
+		if strings.Contains(err.Error(), "unauthorized") {
+			writeError(w, "Unauthorized to update this plan", http.StatusForbidden)
+			return
+		}
+
+		writeError(w, "Failed to update plan", http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Plan updated successfully"})
 }
 
 // HandleGetPlanVerseToday now gets the plan for the logged-in user

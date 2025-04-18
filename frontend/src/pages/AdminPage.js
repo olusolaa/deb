@@ -19,6 +19,8 @@ function AdminPage() {
     const [isLoadingPlans, setIsLoadingPlans] = useState(false)
     const [activePlanId, setActivePlanId] = useState(null)
     const [confirmDelete, setConfirmDelete] = useState(null)
+    const [isEditing, setIsEditing] = useState(false)
+    const [editingPlan, setEditingPlan] = useState(null)
     const [windowHeight, setWindowHeight] = useState(window.innerHeight)
 
     // Handle window resize events for responsiveness
@@ -135,7 +137,7 @@ function AdminPage() {
         setSuccessMessage("")
 
         try {
-            await apiClient.delete(`/api/plans/${planId}`)
+            await apiClient.delete(`/api/plans?id=${planId}`)
             setSuccessMessage("Plan deleted successfully!")
             fetchPlans() // Refresh the list of plans
             setConfirmDelete(null)
@@ -156,6 +158,64 @@ function AdminPage() {
     // Cancel delete confirmation
     const cancelDelete = () => {
         setConfirmDelete(null)
+    }
+    
+    // Handle editing plan
+    const handleEditPlan = (plan) => {
+        setEditingPlan(plan)
+        setTopic(plan.topic)
+        setDuration(plan.duration_days)
+        setIsEditing(true)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    
+    // Handle update plan
+    const handleUpdatePlan = async (e) => {
+        e.preventDefault()
+        if (!topic || duration <= 0 || !editingPlan) {
+            setError("Please enter a valid topic and duration (days).")
+            return
+        }
+        
+        setIsLoading(true)
+        setError(null)
+        setSuccessMessage("")
+        
+        try {
+            const updatedPlan = {
+                id: editingPlan.id,
+                topic: topic,
+                duration_days: Number.parseInt(duration, 10),
+                daily_verses: editingPlan.daily_verses
+            }
+            
+            await apiClient.put("/api/plans", updatedPlan)
+            setSuccessMessage("Plan updated successfully!")
+            setTopic("")
+            setDuration(7)
+            setIsEditing(false)
+            setEditingPlan(null)
+            fetchPlans() // Refresh the list of plans
+            
+            // Auto-dismiss success message after 5 seconds
+            setTimeout(() => {
+                setSuccessMessage("")
+            }, 5000)
+        } catch (err) {
+            console.error("Failed to update plan:", err)
+            const errorMsg = err.response?.data?.error || err.message || "Unknown error"
+            setError(`Plan update failed: ${errorMsg}`)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+    
+    // Cancel editing
+    const cancelEdit = () => {
+        setIsEditing(false)
+        setEditingPlan(null)
+        setTopic("")
+        setDuration(7)
     }
 
     return (
@@ -247,13 +307,15 @@ function AdminPage() {
                         <div className="admin-content">
                             <div className="admin-card create-plan-card">
                                 <div className="admin-card-header">
-                                    <h2 className="admin-card-title">Create New Reading Plan</h2>
+                                    <h2 className="admin-card-title">{isEditing ? "Edit Reading Plan" : "Create New Reading Plan"}</h2>
                                     <p className="admin-card-description">
-                                        Create a new reading plan based on a topic or theme. The system will generate daily verses for the specified duration.
+                                        {isEditing 
+                                            ? "Update the reading plan with new information." 
+                                            : "Create a new reading plan based on a topic or theme. The system will generate daily verses for the specified duration."}
                                     </p>
                                 </div>
 
-                                <form onSubmit={handleCreatePlan} className="admin-form">
+                                <form onSubmit={isEditing ? handleUpdatePlan : handleCreatePlan} className="admin-form">
                                     <div className="form-group">
                                         <label htmlFor="topic">Topic / Theme / Name:</label>
                                         <input
@@ -305,22 +367,43 @@ function AdminPage() {
                                         <p className="input-help">Recommended: 7-30 days (maximum 90 days)</p>
                                     </div>
 
-                                    <button type="submit" className="admin-button create-button" disabled={isLoading}>
-                                        {isLoading ? (
-                                            <>
-                                                <span className="button-spinner"></span>
-                                                <span>Generating Plan...</span>
-                                            </>
-                                        ) : (
-                                            <>
+                                    <div className="button-group">
+                                        <button type="submit" className="admin-button create-button" disabled={isLoading}>
+                                            {isLoading ? (
+                                                <>
+                                                    <span className="button-spinner"></span>
+                                                    <span>{isEditing ? "Updating Plan..." : "Generating Plan..."}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        {isEditing ? (
+                                                            <>
+                                                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                                                <polyline points="7 3 7 8 15 8"></polyline>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                            </>
+                                                        )}
+                                                    </svg>
+                                                    <span>{isEditing ? "Update Reading Plan" : "Create Reading Plan"}</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        {isEditing && (
+                                            <button type="button" className="admin-button cancel-button" onClick={cancelEdit} disabled={isLoading}>
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
                                                 </svg>
-                                                <span>Create Reading Plan</span>
-                                            </>
+                                                <span>Cancel</span>
+                                            </button>
                                         )}
-                                    </button>
+                                    </div>
                                 </form>
                             </div>
 
@@ -399,6 +482,19 @@ function AdminPage() {
                                                                     <span>Activate</span>
                                                                 </button>
                                                             )}
+                                                            
+                                                            <button
+                                                                className="plan-action-button edit-button"
+                                                                onClick={() => handleEditPlan(plan)}
+                                                                disabled={isLoading}
+                                                                aria-label={`Edit ${plan.topic} plan`}
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                                </svg>
+                                                                <span>Edit</span>
+                                                            </button>
 
                                                             {confirmDelete === plan.id ? (
                                                                 <div className="delete-confirmation">

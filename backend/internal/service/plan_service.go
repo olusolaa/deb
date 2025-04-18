@@ -5,6 +5,7 @@ import (
 	"bibleapp/backend/internal/domain"
 	"bibleapp/backend/internal/llm"
 	"bibleapp/backend/internal/repository"
+	"bibleapp/backend/internal/util" // Added for IsValidReference
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,10 @@ type PlanService interface {
 	GetVerseForDate(ctx context.Context, userID string, date time.Time) (domain.DailyVerse, error)
 	// Get an enriched verse for a specific date
 	GetEnrichedVerseForDate(ctx context.Context, userID string, date time.Time, verseService VerseService) (domain.DailyVerse, error)
+	// Delete a plan by ID
+	DeletePlan(ctx context.Context, planID string, userID string) error
+	// Update a plan
+	UpdatePlan(ctx context.Context, plan domain.ReadingPlan, userID string) error
 }
 
 type planService struct {
@@ -53,15 +58,24 @@ func (c *planService) generateReadingPlan(ctx context.Context, topic string, dur
 
 For each day, provide ONLY:
 1. Day number
-2. Bible reference only (no full verse text)
+2. Bible reference (format specified below)
 3. A short title (5 words max)
 
-Output ONLY a JSON object with format: {"daily_verses": [{"day": 1, "reference": "John 1:1-5", "text": "", "title": "Short Title Here", "explanation": ""}]}
+IMPORTANT: Bible reference formats:
+- Single verse: "BookName Chapter:Verse" (e.g., "John 3:16")
+- Verse range: "BookName Chapter:StartVerse-EndVerse" (e.g., "John 3:16-18")
+- Multi-chapter: "BookName StartChapter:StartVerse-EndChapter:EndVerse" (e.g., "Matthew 5:1-7:29")
+- Whole chapter: Include verses (e.g., "John 3:1-36" not just "John 3")
+- Multiple books in same day: Use comma-separated format (e.g., "John 21:25, Acts 1:1-5")
 
-Make sure to use the "title" field, NOT "explanation" field for the short title.
-NEVER include actual verse text.`, durationDays, topic, targetAudience)
+Use full standard book names with proper spacing (e.g., "1 John 1:1" not "1John 1:1" or "First John 1:1").
 
-	userPrompt := fmt.Sprintf(`Create a %d-day reading plan on "%s". Return only the JSON object with verse references.`, durationDays, topic)
+Output ONLY JSON: {"daily_verses": [{"day": 1, "reference": "John 1:1-5, Psalms 1:1-6", "text": "", "title": "Beginning and Blessing", "explanation": ""}]}
+
+Use "title" field for short title. NEVER include verse text.`, durationDays, topic, targetAudience)
+
+	originalUserPrompt := fmt.Sprintf(`Create a %d-day reading plan on "%s". Return only the JSON object with verse references.`, durationDays, topic)
+	userPrompt := originalUserPrompt
 
 	// Use the model from config, not hardcoded
 	request := llm.ChatCompletionRequest{
@@ -77,56 +91,118 @@ NEVER include actual verse text.`, durationDays, topic, targetAudience)
 		},
 	}
 
-	// Add ResponseFormat struct definition if needed (some APIs use this)
-	// type ResponseFormat struct { Type string `json:"type"` }
+	const maxRetries = 3
+	var lastError error
 
-	llmResponse, err := c.llmClient.CreateChatCompletion(ctx, request)
-	if err != nil {
-		return plan, fmt.Errorf("LLM completion failed during plan generation: %w", err)
+	// --- Retry Loop for LLM Call, Parsing, and Validation ---
+	for retry := 0; retry < maxRetries; retry++ {
+
+		// Update messages for retries
+		if retry > 0 {
+			// Replace last user message with the updated prompt containing feedback
+			if len(request.Messages) > 0 && request.Messages[len(request.Messages)-1].Role == "user" {
+				request.Messages[len(request.Messages)-1].Content = userPrompt
+			} else {
+				// Should not happen with our structure, but fallback just in case
+				request.Messages = append(request.Messages, llm.Message{Role: "user", Content: userPrompt})
+			}
+			log.Printf("INFO: Retrying plan generation (attempt %d/%d) for topic '%s' due to validation errors.", retry+1, maxRetries, topic)
+		}
+
+		llmResponse, err := c.llmClient.CreateChatCompletion(ctx, request)
+		if err != nil {
+			lastError = fmt.Errorf("LLM completion failed (attempt %d/%d): %w", retry+1, maxRetries, err)
+			// Don't retry on API errors, return directly
+			log.Printf("ERROR: %s", lastError.Error())
+			return plan, lastError
+		}
+
+		if len(llmResponse.Choices) == 0 || llmResponse.Choices[0].Message.Content == "" {
+			lastError = fmt.Errorf("LLM returned empty response (attempt %d/%d)", retry+1, maxRetries)
+			userPrompt = originalUserPrompt + "\n\nThe previous attempt returned an empty response. Please provide the JSON plan."
+			continue // Retry
+		}
+
+		rawJson := llmResponse.Choices[0].Message.Content
+		log.Printf("DEBUG: Raw LLM JSON response (attempt %d/%d):\n%s", retry+1, maxRetries, rawJson)
+
+		// --- Parse the LLM's JSON response ---
+		if strings.HasPrefix(rawJson, "```json") {
+			rawJson = strings.TrimPrefix(rawJson, "```json")
+			rawJson = strings.TrimSuffix(rawJson, "```")
+			rawJson = strings.TrimSpace(rawJson)
+		}
+
+		var planData struct {
+			DailyVerses []domain.DailyVerse `json:"daily_verses"`
+		}
+
+		err = json.Unmarshal([]byte(rawJson), &planData)
+		if err != nil {
+			lastError = fmt.Errorf("failed to parse LLM JSON (attempt %d/%d): %w. Raw JSON: %s", retry+1, maxRetries, err, rawJson)
+			log.Printf("ERROR: %s", lastError.Error())
+			userPrompt = originalUserPrompt + "\n\nThe previous response was not valid JSON. Please ensure you ONLY return the JSON object, without any surrounding text or markers."
+			continue // Retry
+		}
+
+		if len(planData.DailyVerses) == 0 {
+			lastError = fmt.Errorf("LLM generated plan with no daily verses (attempt %d/%d)", retry+1, maxRetries)
+			log.Printf("WARN: %s", lastError.Error())
+			userPrompt = originalUserPrompt + "\n\nThe previous response had an empty 'daily_verses' array. Please ensure the array contains the daily plan entries."
+			continue // Retry
+		}
+
+		// --- === VALIDATION STEP === ---
+		invalidRefsWithErrors := make(map[string]string)
+		for i, dailyVerse := range planData.DailyVerses {
+			if strings.TrimSpace(dailyVerse.Reference) == "" {
+				invalidRefsWithErrors[fmt.Sprintf("Day %d", i+1)] = "reference field is empty"
+				continue
+			}
+			// Handle comma-separated references within a single day's entry
+			individualRefs := strings.Split(dailyVerse.Reference, ",")
+			for _, singleRef := range individualRefs {
+				trimmedRef := strings.TrimSpace(singleRef)
+				if trimmedRef == "" {
+					continue
+				} // Skip empty strings resulting from split
+
+				isValid, validationErr := util.IsValidReference(trimmedRef)
+				if !isValid {
+					invalidRefsWithErrors[trimmedRef] = validationErr.Error()
+				}
+			}
+		}
+
+		// --- === CHECK VALIDATION RESULTS === ---
+		if len(invalidRefsWithErrors) == 0 {
+			// Success! Populate the plan and return
+			log.Printf("INFO: Successfully generated and validated reading plan for '%s' after %d attempt(s).", topic, retry+1)
+			plan.Topic = topic
+			plan.DurationDays = durationDays
+			plan.TargetAudience = targetAudience
+			plan.DailyVerses = planData.DailyVerses
+			return plan, nil // <<< SUCCESS EXIT
+		}
+
+		// --- Validation Failed - Prepare for Retry ---
+		lastError = fmt.Errorf("validation failed (attempt %d/%d): %d invalid references found", retry+1, maxRetries, len(invalidRefsWithErrors))
+		log.Printf("WARN: %s. Invalid references: %v", lastError.Error(), invalidRefsWithErrors)
+
+		// Construct feedback prompt
+		feedback := "\n\nThe previous plan contained invalid or incorrectly formatted references. Please correct the following:\n"
+		for ref, reason := range invalidRefsWithErrors {
+			feedback += fmt.Sprintf("- '%s': %s\n", ref, reason)
+		}
+		feedback += "Ensure all references strictly follow the required formats ('Book Ch:V' or 'Book Ch:V-V') and are complete."
+		userPrompt = originalUserPrompt + feedback // Append feedback to original request
+
+		// Loop continues for the next retry
 	}
 
-	if len(llmResponse.Choices) == 0 || llmResponse.Choices[0].Message.Content == "" {
-		return plan, errors.New("LLM returned an empty response for the plan")
-	}
-
-	rawJson := llmResponse.Choices[0].Message.Content
-	log.Printf("DEBUG: Raw LLM JSON response for plan:\n%s", rawJson) // Log the raw response for debugging
-
-	// --- Parse the LLM's JSON response ---
-	// The LLM should ideally return ONLY the JSON object as requested.
-	// Sometimes they add ```json ... ``` markers, try to strip them.
-	if strings.HasPrefix(rawJson, "```json") {
-		rawJson = strings.TrimPrefix(rawJson, "```json")
-		rawJson = strings.TrimSuffix(rawJson, "```")
-		rawJson = strings.TrimSpace(rawJson)
-	}
-
-	// We expect the JSON structure: {"daily_verses": [...]}
-	var planData struct {
-		DailyVerses []domain.DailyVerse `json:"daily_verses"`
-	}
-
-	err = json.Unmarshal([]byte(rawJson), &planData)
-	if err != nil {
-		// Log the raw JSON that failed to parse
-		log.Printf("ERROR: Failed to unmarshal LLM JSON response into plan structure. Raw JSON: %s", rawJson)
-		return plan, fmt.Errorf("failed to parse LLM JSON response for plan: %w", err)
-	}
-
-	if len(planData.DailyVerses) == 0 {
-		return plan, errors.New("LLM generated a plan with no daily verses")
-	}
-
-	// Populate the rest of the plan details
-	// Note: UserID is set in the CreatePlan method, not here
-	plan.Topic = topic
-	plan.DurationDays = durationDays
-	plan.TargetAudience = targetAudience
-	plan.DailyVerses = planData.DailyVerses
-	// ID and CreatedAt will be set by the repository when saving
-
-	return plan, nil
-
+	// If loop finishes, all retries failed
+	log.Printf("ERROR: Failed to generate a valid reading plan for topic '%s' after %d retries. Last error: %v", topic, maxRetries, lastError)
+	return plan, fmt.Errorf("failed to generate a valid reading plan after %d retries: %w", maxRetries, lastError)
 }
 
 func (s *planService) CreatePlan(ctx context.Context, userID string, topic string, durationDays int, targetAudience string) (domain.ReadingPlan, error) {
@@ -558,4 +634,49 @@ Your response should be ONLY the topic name, nothing else. Keep it concise (3-7 
 	topic = strings.Trim(topic, "`\"'")
 
 	return topic, nil
+}
+
+// DeletePlan deletes a plan by ID, ensures the user has permission
+func (s *planService) DeletePlan(ctx context.Context, planID string, userID string) error {
+	// First check if the plan exists and belongs to this user
+	plan, err := s.planRepo.FindByID(ctx, planID)
+	if err != nil {
+		return fmt.Errorf("error finding plan before deletion: %w", err)
+	}
+
+	if plan == nil {
+		return errors.New("plan not found")
+	}
+
+	// Verify ownership or admin status
+	if plan.UserID != userID && userID != "admin" {
+		return errors.New("unauthorized: cannot delete another user's plan")
+	}
+
+	// Delete the plan
+	return s.planRepo.Delete(ctx, planID)
+}
+
+// UpdatePlan updates an existing plan, ensures the user has permission
+func (s *planService) UpdatePlan(ctx context.Context, plan domain.ReadingPlan, userID string) error {
+	// First check if the plan exists and belongs to this user
+	existingPlan, err := s.planRepo.FindByID(ctx, plan.ID.String())
+	if err != nil {
+		return fmt.Errorf("error finding plan before update: %w", err)
+	}
+
+	if existingPlan == nil {
+		return errors.New("plan not found")
+	}
+
+	// Verify ownership or admin status
+	if existingPlan.UserID != userID && userID != "admin" {
+		return errors.New("unauthorized: cannot update another user's plan")
+	}
+
+	// Update the plan (keep original user ID and creation date)
+	plan.UserID = existingPlan.UserID
+	plan.CreatedAt = existingPlan.CreatedAt
+
+	return s.planRepo.Save(ctx, &plan)
 }

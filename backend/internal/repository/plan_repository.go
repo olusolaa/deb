@@ -4,7 +4,6 @@ import (
 	"bibleapp/backend/internal/domain"
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -24,7 +23,8 @@ type PlanRepository interface {
 	Save(ctx context.Context, plan *domain.ReadingPlan) error
 	FindByID(ctx context.Context, id string) (*domain.ReadingPlan, error)
 	FindByUser(ctx context.Context, userID string) ([]*domain.ReadingPlan, error)
-	// Add other methods like FindAll, Delete as needed
+	Delete(ctx context.Context, id string) error
+	// Add other methods like FindAll as needed
 }
 
 // MongoPlanRepository implements PlanRepository using MongoDB.
@@ -179,55 +179,23 @@ func (r *MongoPlanRepository) FindByID(ctx context.Context, id string) (*domain.
 	return &plan, nil
 }
 
-// InMemoryPlanRepository implements PlanRepository using an in-memory map
-type InMemoryPlanRepository struct {
-	plans map[string]*domain.ReadingPlan
-}
-
-// NewInMemoryPlanRepository creates a new instance of InMemoryPlanRepository
-func NewInMemoryPlanRepository() *InMemoryPlanRepository {
-	return &InMemoryPlanRepository{
-		plans: make(map[string]*domain.ReadingPlan),
-	}
-}
-
-// Save saves a reading plan to the in-memory repository
-func (r *InMemoryPlanRepository) Save(ctx context.Context, plan *domain.ReadingPlan) error {
-	if plan.ID == uuid.Nil {
-		plan.ID = uuid.New()
-		plan.CreatedAt = time.Now()
-	}
-
-	// Store the plan by string ID
-	r.plans[plan.ID.String()] = plan
-	return nil
-}
-
-// FindByID retrieves a plan by its UUID string
-func (r *InMemoryPlanRepository) FindByID(ctx context.Context, id string) (*domain.ReadingPlan, error) {
-	uuid, err := uuid.Parse(id)
+// Delete removes a plan by its ID
+func (r *MongoPlanRepository) Delete(ctx context.Context, id string) error {
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid UUID format: %w", err)
+		log.Printf("ERROR: Invalid plan UUID format for delete: %s", id)
+		return errors.New("invalid plan UUID format")
 	}
-
-	plan, exists := r.plans[uuid.String()]
-	if !exists {
-		return nil, nil
+	filter := bson.M{"_id": parsedUUID}
+	result, err := r.collection.DeleteOne(ctx, filter)
+	if err != nil {
+		log.Printf("ERROR: Failed to delete plan %s: %v", id, err)
+		return err
 	}
-
-	return plan, nil
-}
-
-// FindByUser retrieves all plans associated with a specific user ID.
-func (r *InMemoryPlanRepository) FindByUser(ctx context.Context, userID string) ([]*domain.ReadingPlan, error) {
-	// Filter plans by userID
-	plans := make([]*domain.ReadingPlan, 0)
-
-	for _, plan := range r.plans {
-		if plan.UserID == userID {
-			plans = append(plans, plan)
-		}
+	if result.DeletedCount == 0 {
+		log.Printf("WARN: Plan with ID %s not found for deletion", id)
+		return mongo.ErrNoDocuments
 	}
-
-	return plans, nil
+	log.Printf("INFO: Successfully deleted plan with ID: %s", id)
+	return nil
 }

@@ -24,11 +24,11 @@ func NewRouter(h *APIHandler, allowedOrigin string) http.Handler {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{allowedOrigin},
 		// Allow specific methods needed by your frontend
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		// Allow headers the frontend might send, including Authorization for JWT
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		// Headers the browser is allowed to access in responses
-		ExposedHeaders:   []string{"Link"},
+		ExposedHeaders: []string{"Link"},
 		// Crucial for sending/receiving cookies (like the auth_token)
 		AllowCredentials: true,
 		MaxAge:           86400, // Cache CORS preflight response for 1 day
@@ -59,19 +59,17 @@ func NewRouter(h *APIHandler, allowedOrigin string) http.Handler {
 
 		// Reading Plan routes
 		r.Route("/plans", func(r chi.Router) {
-			r.Post("/", h.HandleCreatePlan)       // POST /api/plans
-			r.Get("/", h.HandleListPlans)          // GET /api/plans
+			r.Post("/", h.HandleCreatePlan)            // POST /api/plans
+			r.Get("/", h.HandleListPlans)              // GET /api/plans
 			r.Get("/today", h.HandleGetPlanVerseToday) // GET /api/plans/today
-			// Add routes for getting a specific plan? PUT/DELETE plans?
-			// r.Get("/{planID}", h.HandleGetPlan)
-			// r.Put("/{planID}", h.HandleUpdatePlan)
-			// r.Delete("/{planID}", h.HandleDeletePlan)
+			r.Put("/", h.HandleUpdatePlan)             // PUT /api/plans
+			r.Delete("/", h.HandleDeletePlan)          // DELETE /api/plans?id=planID
 		})
 
 		// Chat routes
 		r.Route("/chat", func(r chi.Router) {
-			r.Post("/", h.HandleChat)             // POST /api/chat
-			r.Post("/reset", h.HandleResetChat)   // POST /api/chat/reset
+			r.Post("/", h.HandleChat)           // POST /api/chat
+			r.Post("/reset", h.HandleResetChat) // POST /api/chat/reset
 		})
 
 		// NOTE: The previous `/api/admin` group is removed as we now

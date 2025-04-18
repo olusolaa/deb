@@ -13,16 +13,21 @@ require (
 	golang.org/x/oauth2 v0.25.0 // Added for OAuth2
 )
 
-require github.com/golang-jwt/jwt/v5 v5.2.2
+require (
+	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/stretchr/testify v1.10.0
+)
 
 require (
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.12.0 // indirect
